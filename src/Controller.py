@@ -1,0 +1,82 @@
+# TODO - Add support for keymap options
+from direct.showbase.DirectObject import DirectObject
+from pandac.PandaModules import CollisionHandlerQueue
+from pandac.PandaModules import CollisionNode
+from pandac.PandaModules import CollisionRay
+from pandac.PandaModules import CollisionTraverser
+from pandac.PandaModules import GeomNode
+import Event
+
+# KeyboardController------------------------------------------------------------
+class KeyboardController(DirectObject):
+	"""This class registers keyboard events with Panda3D and broadcasts events"""
+	def __init__(self):
+		
+		# Register events
+		self.accept("escape", Event.Dispatcher().broadcast, [Event.Event('E_Key_Exit', self)])
+		self.accept("m",      Event.Dispatcher().broadcast, [Event.Event('E_Key_Move', self)])
+		self.accept("arrow_up", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraUp', self)])
+		self.accept("arrow_down", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraDown', self)])
+		self.accept("arrow_left", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraLeft', self)])
+		self.accept("arrow_right", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraRight', self)])
+		self.accept("arrow_up-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraUp-up', self)])
+		self.accept("arrow_down-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraDown-up', self)])
+		self.accept("arrow_left-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraLeft-up', self)])
+		self.accept("arrow_right-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_CameraRight-up', self)])
+		self.accept("page_up", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZUp', self)])
+		self.accept("page_down", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZDown', self)])
+		self.accept("page_up-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZUp-up', self)])
+		self.accept("page_down-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZDown-up', self)])
+		
+# MouseController------------------------------------------------------------
+class MouseController(DirectObject):
+	"""This class registers mouse events with Panda3D and broadcasts events"""
+	def __init__(self):
+		
+		# Register events
+		self.accept("mouse1",     Event.Dispatcher().broadcast, [Event.Event('E_Mouse_1', self)])
+		self.accept("mouse2",     Event.Dispatcher().broadcast, [Event.Event('E_Mouse_2', self)])
+		self.accept("mouse3",     Event.Dispatcher().broadcast, [Event.Event('E_Mouse_3', self)])
+		self.accept("mouse1-up",  Event.Dispatcher().broadcast, [Event.Event('E_Mouse_1_Up', self)])
+		self.accept("mouse2-up",  Event.Dispatcher().broadcast, [Event.Event('E_Mouse_2_Up', self)])
+		self.accept("mouse3-up",  Event.Dispatcher().broadcast, [Event.Event('E_Mouse_3_Up', self)])
+		self.accept("wheel_up",   Event.Dispatcher().broadcast, [Event.Event('E_MouseWheel_Up', self)])
+		self.accept("wheel_down", Event.Dispatcher().broadcast, [Event.Event('E_MouseWheel_Down', self)])
+
+class Selector:
+	'''A Selector listens for mouse clicks and then runs select. Select then
+	   broadcasts the selected tag (if there is one)'''
+	def __init__(self):
+		self.cTrav = CollisionTraverser()
+		self.cHandler = CollisionHandlerQueue()
+		self.pickerNode = CollisionNode('mouseRay')
+		self.pickerNP = camera.attachNewNode(self.pickerNode)
+		self.pickerNode.setFromCollideMask(GeomNode.getDefaultCollideMask())
+		self.pickerRay = CollisionRay()
+		self.pickerNode.addSolid(self.pickerRay)
+		self.cTrav.addCollider(self.pickerNP, self.cHandler)
+		Event.Dispatcher().register(self, 'E_Mouse_1', self.select)
+		
+	def select(self, event):
+		print("SELECTING")
+		if base.mouseWatcherNode.hasMouse():
+			mpos = base.mouseWatcherNode.getMouse()
+			self.pickerRay.setFromLens(base.camNode, mpos.getX(), mpos.getY())
+			self.cTrav.traverse(render) # TODO - change this to a lower node
+			if self.cHandler.getNumEntries() > 0:
+				self.cHandler.sortEntries()
+				selectionNP = self.cHandler.getEntry(0).getIntoNodePath()
+				selection = selectionNP.findNetTag('CollisionTag').getTag('CollisionTag')
+				if selection is not '':
+					print('COLLISION WITH: ' + selection)
+					Event.Dispatcher().broadcast(Event.Event('E_EntitySelect', src=self, data=selection))
+				else:
+					print("NO COLLISION")
+					#Event.Dispatcher().broadcast(Event.Event('E_EntityUnSelect', src=self, data=selection))
+					
+	def pause(self):
+		Event.Dispatcher().unregister(self, 'E_Mouse_1')
+		
+	def unpause(self):
+		print("unpausing selector")
+		Event.Dispatcher().register(self, 'E_Mouse_1', self.select)
