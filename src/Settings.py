@@ -1,33 +1,60 @@
+''' Settings.py
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	Purpose:		The GameSettings class loads and saves global game
+					settings. It also provides an interface for accessing
+					settings.
+	Usage:			None
+	References:		None
+	Restrictions:	None
+	License:		TBD
+	Notes:			The GameSettings object is a singleton.
+'''
+
+# Python imports
 import re, sys, os.path
+
+# PSG imports
 from Util import Singleton
 
 class GameSettings:
-	"""This class provides storage for the game settings.
-	This could be integrated into the Panda config file for"""
+	''' This class provides storage for the game settings.
+		This could be integrated into the Panda config file for'''
+		
 	__metaclass__=Singleton
-	_cfgFilePath = 'data/config.cfg'
-	_defaultDict = {
-			'RESOLUTION': '800x600 ', 
-			'FULLSCREEN': 'False',
-			'SHOWFPS': 'True',
-			'ALPHABITS': '16',
-			'ANTIALIAS': '32',
-			'COLORDEPTH': '16',
-			'USEBLOOM': 'True', 
-			'USEFOG': 'True'}
-	_configDict = None
+	
+	def __init__(self, cfgfile=None):
+		''' Setup initial values.'''
+		
+		if cfgfile == None: self._cfgFilePath = 'data/config.cfg'
+		else: self._cfgFilePath = self.cfgfile
+		self._defaultDict = {
+				'RESOLUTION': '800x600 ', 
+				'FULLSCREEN': 'False',
+				'SHOWFPS': 'True',
+				'ALPHABITS': '16',
+				'ANTIALIAS': '32',
+				'COLORDEPTH': '16',
+				'USEBLOOM': 'True', 
+				'USEFOG': 'True'}
+		self._configDict = None
 		
 	def getSetting(self, key):
+		'''	Retrieve the value for the given key. If the key doesn't exist
+			return None.'''
+			
 		if self._configDict.has_key(key):
 			return self._configDict[key]
 		else:
-			return ""
+			return None
 		
 	def setSetting(self, key, value):
 		self._configDict[key] = value
 		
 	def loadSettings(self):
-		"""Modified from http://www.daniweb.com/forums/thread30215.html"""
+		''' Load the configuration file and parse it filling in the _configDict.
+			Modified from http://www.daniweb.com/forums/thread30215.html'''
+			
 		# Open File and read text
 		if not(os.path.exists(self._cfgFilePath) or os.path.isfile(self._cfgFilePath)):
 			self._configDict = self._defaultDict
@@ -52,8 +79,14 @@ class GameSettings:
 		if (self._configDict.keys() != self._defaultDict.keys()):
 			for key in filter(lambda x: x not in self._configDict.keys(),self._defaultDict.keys()):
 				self._configDict[key] = self._defaultDict[key]
+				
+		# Create some derivative values
+		self._configDict['X_RES'] = int(self._configDict['RESOLUTION'].split()[0].split('x')[0])
+		self._configDict['Y_RES'] = int(self._configDict['RESOLUTION'].split()[0].split('x')[1])
 		
 	def saveSettings(self):
+		''' Save the current configuration state to the config file.'''
+		
 		# Open file
 		try: cfgFile = open(self._cfgFilePath, 'w')
 		except Exception, e: raise

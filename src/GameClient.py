@@ -10,7 +10,7 @@
 '''
 
 # Python imports
-import sys
+import sys, cPickle, os
 
 # Panda imports
 from direct.showbase.DirectObject import DirectObject
@@ -41,14 +41,36 @@ class GameClient(DirectObject):
 		self._dispatcher.register(self, 'E_ExitGame', self.exitGame)
 		self._dispatcher.register(self, 'E_ExitProgram', self.exitProgram)
 		
+		self.maps               = []
+		self.players            = []
+		self.clientconnection   = ClientConnection()
+		self.game               = Game()
 		# These will be initialized upon starting the actual game
 		self.viewstate          = None
 		self.gamestatemgr       = None
 		self.keyboardcontroller = None
 		self.mousecontroller    = None
 		self.gameFrame          = None
-		self.clientconnection   = ClientConnection()
-		self.game               = Game()
+		
+		# Load files
+		for f in os.listdir('data/maps'):
+			if os.path.splitext(f)[1] == '.map':
+				try:
+					fh = open('data/maps/' + f,'rb')
+					map = cPickle.load(fh)
+					self.maps.append(map)
+					fh.close()
+				except: print('Could not open file %s'%f)
+		for f in os.listdir('data/players'):
+			if os.path.splitext(f)[1] == '.plr':
+				try:
+					fh = open('data/players/' + f,'rb')
+					player = cPickle.load(fh)
+					self.players.append(player)
+					fh.close()
+				except: print('Could not open file %s'%f)
+				
+		#self.temp()
 		
 		# Load settings
 		GameSettings().loadSettings()
@@ -57,9 +79,58 @@ class GameClient(DirectObject):
 		self.gui = GUI(Keys(),theme=PSGTheme())
 		
 		# Show the main menu which will call start game
-		self.menu = MainScreen(self.game, self.clientconnection)
+		self.menu = MainScreen(self, self.clientconnection)
 		
 		#self.startGame()
+		
+	def temp(self):
+		from Map import SerializableMap
+		from Player import SerializablePlayer
+		
+		
+		p = SerializablePlayer(name="Chad the Destroyer", faction='Terrans', type='Human',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		
+		p = SerializablePlayer(name="Gorath", faction='Protath', type='ComputerAI',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		
+		p = SerializablePlayer(name="Chilrog", faction='Protath', type='ComputerAI',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		
+		m = SerializableMap()
+		m.name = 'The Battle of Gorath'
+		m.mapSize = (150,150,40)
+		startingPlanets = 1
+		
+		m.addPlayer('Chad the Destroyer', faction='Terrans', type='Human', ai='None')
+		m.addPlayer('Gorath', faction='Protath', type='Computer', ai='Gorath')
+		m.addPlayer('Chilrog', faction='Protath', type='Computer', ai='Chilrog')
+		
+		m.addPlanet(self, (100,100,10), owner='Chad the Destroyer', rep='planet_01')
+		m.addPlanet(self, (-100,-50,-30), owner='Gorath', rep='planet_01')
+		m.addPlanet(self, (50,-100,0), owner='Chilrog', rep='planet_01')
+		m.addPlanet(self, (20,20,20), owner='None', rep='planet_01')
+		m.addPlanet(self, (-50,-100,-20), owner='None', rep='planet_01')
+		m.addPlanet(self, (-20,-20,0), owner='None', rep='planet_01')
+		m.addPlanet(self, (0,0,0), owner='None', rep='planet_01')
+		
+		m.addShip('LightCapture', pos=(110,110,10), hpr=(0,0,0), owner='Chad the Destroyer', rep='ship_03')
+		m.addShip('LightCapture', pos=(-110,-50,-30), hpr=(0,0,0), owner='Gorath', rep='ship_03')
+		m.addShip('LightCapture', pos=(50,-110,0), hpr=(0,0,0), owner='Chilrog', rep='ship_03')
+		
+		fh = open('data/maps/' + m.name.replace(' ', ''),'wb')
+		cPickle.dump(m, fh)
+		fh.close()
+		
 		
 	def createGame(self):
 		''' If we are playing a single player game or hosting a multiplayer game
@@ -79,9 +150,11 @@ class GameClient(DirectObject):
 			Information for this came from here
 			http://panda3d.org/phpbb2/viewtopic.php?t=2848'''
 		# Setup values from gamesettings
-		res = GameSettings().getSetting('RESOLUTION').split()[0].split('x')
-		self.xRes = int(res[0])
-		self.yRes = int(res[1])
+		#res = GameSettings().getSetting('RESOLUTION').split()[0].split('x')
+		#self.xRes = int(res[0])
+		#self.yRes = int(res[1])
+		self.xRes = GameSettings().getSetting('X_RES')
+		self.yRes = GameSettings().getSetting('Y_RES')
 		aa    = int(GameSettings().getSetting('ANTIALIAS'))
 		alpha = int(GameSettings().getSetting('ALPHABITS'))
 		color = int(GameSettings().getSetting('COLORDEPTH'))

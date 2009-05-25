@@ -67,7 +67,7 @@ class Representation:
 	foot    = 10
 	aaLevel = 2
 	
-	def __init__(self,  entity=None, pos=None,  hpr=None,  tag=""):
+	def __init__(self,  entity=None, pos=None,  hpr=None,  tag="", model=''):
 		self.entity = entity
 		if self.entity != None:
 			self.pos = self.entity.getPos()
@@ -108,8 +108,8 @@ class RepShip(Representation):
 	_movecursor = None
 	_attackcursor = None
 	
-	def __init__(self, entity=None, pos=None,  hpr=None,  tag=""):
-		Representation.__init__(self, entity, pos,  hpr, tag)
+	def __init__(self, entity=None, pos=None,  hpr=None,  tag="", model=''):
+		Representation.__init__(self, entity, pos,  hpr, tag, model)
 		
 	def selectMove(self):
 		# Draw movement radii
@@ -162,8 +162,8 @@ class RepShip(Representation):
 		self.pos = pos
 		
 class RepLightCapture(RepShip):
-	def __init__(self, entity=None, pos=None,  hpr=None,  tag=""):
-		RepShip.__init__(self, entity, pos,  hpr,  tag)
+	def __init__(self, entity=None, pos=None,  hpr=None,  tag="", model=''):
+		RepShip.__init__(self, entity, pos,  hpr,  tag, model)
 		self.model = loader.loadModelCopy("data/models/ship_03.egg")
 		self.model.setScale(0.5)
 		self.model.setPos(self.pos)
@@ -198,8 +198,8 @@ class RepLightCapture(RepShip):
 		moveSequence.start()
 		
 class RepPlanet(Representation):
-	def __init__(self, entity=None, pos=None,  hpr=None,  tag=""):
-		Representation.__init__(self, entity, pos,  hpr, tag)
+	def __init__(self, entity=None, pos=None,  hpr=None,  tag="", model=''):
+		Representation.__init__(self, entity, pos,  hpr, tag, model)
 		self.model = loader.loadModelCopy("data/models/planet_01.egg")
 		self.model.setTexture(loader.loadTexture('data/textures/tex_planet_01.png'), 1)
 		self.model.setScale(2.5)

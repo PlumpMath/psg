@@ -7,7 +7,8 @@
 	References:		None
 	Restrictions:	None
 	License:		TBD
-	Notes:			TODO - Make the PSGServert a singleton.
+	Notes:			TODO - Make the PSGServer a singleton.
+						 - Add a clean command to clear abandoned connections
 '''
 from pandac.PandaModules import loadPrcFileData
 loadPrcFileData("", "window-type none")
@@ -140,6 +141,7 @@ class Game:
 	players    = []
 	maxPlayers = 2
 	map        = None
+	mapName    = 'None'
 	turnNumber = 0
 	startTime  = None
 	
@@ -155,6 +157,7 @@ class Game:
 		self.name       = name
 		self.maxPlayers = maxplayers
 		self.map        = map
+		if self.map != None: self.mapName = self.map.name
 		self.startTime  = int(time.time())
 		
 		
@@ -171,10 +174,11 @@ class PSGServer():
 	''' The main server that listens for connections and manages active games.
 		This also runs the console which can interact with the server.'''
 	users = [User('chad','password1'),
-             User('josh','password2'),
-             User('james','password3')]
+		     User('josh','password2'),
+		     User('james','password3')]
 	# Clients is a dict of the form {Connection: User}
 	clients = {}
+	# games is a list of active games
 	games = []
 	_haveCommand = True
 	_command     = ''
@@ -200,7 +204,12 @@ class PSGServer():
 			taskMgr.add(self.__consoleTask_u, 'consoleTask', -38)
 		elif OS_TYPE == 'Windows':
 			taskMgr.add(self.__consoleTask_w, 'consoleTask', -38)
-
+		
+		# Build some test games
+		for i in range(4):
+			g = Game('Test game - %d'%i, i, None)
+			self.games.append(g)
+			
 		print('Server initialized')
 		
 	def __listenTask(self, Task):
@@ -246,21 +255,21 @@ class PSGServer():
 			client (Connection): the connection that this datagram came from'''
 		self.__printNotice('%s: Recieved msg: %d'%(client.getAddress().getIpString(),msgID))
 		if (msgID == MSG_AUTH_REQ):
-			self.__sendAuthRes(data, msgID, client)
+			self.__handleAuth(data, msgID, client)
 		elif (msgID == MSG_GAMELIST_REQ):
 			print('SENDING GAMELIST RES')
-			self.__sendGameListRes(data, msgID, client)
+			self.__handleGameList(data, msgID, client)
 		elif (msgID == MSG_NEWGAME_REQ):
 			print('SENDING NEWGAME RES')
-			self.__sendNewGameRes(data, msgID, client)
+			self.__handleNewGame(data, msgID, client)
 		elif (msgID == MSG_DISCONNECT_REQ):
 			print('SENDING DISCONNECT RES')
-			self.__sendDisconnectRes(data, msgID, client)
+			self.__handleDisconnect(data, msgID, client)
 		else:
 			self.__printNotice('%s: Unkown MSG_ID: %d'%(client.getAddress().getIpString(),msgID))
 			print(data)
 	
-	def __sendAuthRes(self, data, msgID, client):
+	def __handleAuth(self, data, msgID, client):
 		''' Try to authorize the connecting user, send the result.
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
@@ -287,7 +296,7 @@ class PSGServer():
 		pkg.addUint32(auth)
 		self._cWriter.send(pkg, client)
 	
-	def __sendGameListRes(self, data, msgID, client):
+	def __handleGameList(self, data, msgID, client):
 		''' Assemble a list of active games and send it to the requesting client.
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
@@ -296,17 +305,19 @@ class PSGServer():
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_GAMELIST_RES)
 		pkg.addString('SOT') # Start Of Transmission
-		for g in self.games:
+		for i,g in enumerate(self.games):
 			pkg.addUint32(g.id)
 			pkg.addString(g.name)
 			pkg.addUint32(g.maxPlayers)
-			pkg.addString(g.map)
+			pkg.addString(g.mapName)
 			pkg.addUint32(g.startTime)
 			pkg.addUint32(g.turnNumber)
+			if i < len(self.games)-1:
+				pkg.addString('T') # Still tranmitting
 		pkg.addString('EOT') # End Of Transmission
 		self._cWriter.send(pkg, client)
 		
-	def __sendNewGameRes(self, data, msgID, client):
+	def __handleNewGame(self, data, msgID, client):
 		''' Create a new game and respond with success or failure.
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
@@ -329,18 +340,26 @@ class PSGServer():
 			pkg.addUint32(0)
 		self._cWriter.send(pkg, client)
 		
-	def __sendDisconnectRes(self, data, msgID, client):
+	def __handleDisconnect(self, data, msgID, client):
 		''' Disconnect and send confirmation to the client.
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
 			client (Connection): the connection that tendNehis datagram came from'''
+		
+		# Create a response
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_DISCONNECT_RES)
 		self._cWriter.send(pkg, client)
+		
+		# If user is logged in disconnect
 		user = self.clients[client]
-		user.disconnect()
+		if user:
+				user.disconnect()
+		
+		# Delete client from list
 		del self.clients[client]
-		print('disconnected client %s'%client.getAddress().getIpString())
+		
+		#print('disconnected client %s'%client.getAddress().getIpString())
 		
 	def __consoleTask_u(self, Task):
 		'''This task accepts commands for the server in a Unix environment.
@@ -438,7 +457,7 @@ class PSGServer():
 			for g in self.games:
 				runtime = (int(time.time()) - g.startTime) # Divide by 60 for minutes
 				self.__printLine("%s|%s|%s|%s|%s|%s"%(str(g.id).ljust(4),
-							g.name.ljust(15),g.map.ljust(15),
+							g.name.ljust(15),g.mapName.ljust(15),
 							str(g.maxPlayers).ljust(7),
 							str(g.turnNumber).ljust(6),str(runtime)))
 				

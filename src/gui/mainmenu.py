@@ -1,3 +1,4 @@
+#from __future__ import nested_scopes
 ''' mainmenu.py
 	Author:			Chad Rempp
 	Date:			2009/05/15
@@ -8,6 +9,9 @@
 	License:		TBD
 	Notes:			None
 '''
+
+# Python imports
+import os
 
 # PSG imports
 from direct.gui.OnscreenImage import OnscreenImage
@@ -21,26 +25,43 @@ x_res = 640
 y_res = 480
 
 def tpc(coord,y=False): # To Panda Coordinate
-    ratio   = x_res/y_res # Ratio for aspect2d
-    shifter = x_res/2
-    if y:
-        scaler = -1/shifter
-    else:
-        scaler = ratio/shifter
-    return ((coord - shifter) * scaler)
+	''' Helper function to convert from Panda coord system to interger screen
+		coord system.'''
+	
+	ratio   = x_res/y_res # Ratio for aspect2d
+	shifter = x_res/2
+	if y:
+		scaler = -1/shifter
+	else:
+		scaler = ratio/shifter
+	return ((coord - shifter) * scaler)
 
 class MainScreen:
+	''' Controls the main menu screen. This is not the actual main menu, this
+		object controls movement between the main menu forms'''
+	
+	# Size of the menu forms
 	menusize = Vec2(420,300)
 	menupad  = Vec4(20,20,30,0) # (l,r,t,b)
+	
 	_currentmenu = None
 	
+	# Variables to be used in the menus
 	mapList = []
 	playerList = []
 	
-	def __init__(self, game, clientconnection):
-		self.menupos = Vec2((x_res-self.menusize[0])/2,(y_res-self.menusize[1])/2+40)
-		
-		self.game = game
+	def __init__(self, gameclient, clientconnection):
+		''' Create the menu forms and draw the background image.
+			game (Game): the game created in the GameClient that the menus
+						will finish setting up
+			clientconnection (ClientConnection): the connection the GameClient
+						made that the menus will use to connect to a server.'''
+						
+		self.menupos    = Vec2((x_res-self.menusize[0])/2,(y_res-self.menusize[1])/2+40)
+		self.mapList    = []
+		self.playerList = []
+		self.gameList   = []
+		self.gameclient = gameclient
 		self.clientconnection = clientconnection
 		
 		self.buildOptionLists()
@@ -64,7 +85,7 @@ class MainScreen:
 		self.multi.toggle()
 		
 		# Setup menu state
-		self._currentmenu = self.main
+		self._currentmenu  = self.main
 		
 	def showMain(self, button, key, mouse):
 		self._currentmenu.toggle()
@@ -97,9 +118,11 @@ class MainScreen:
 	def buildOptionLists(self):
 		''' This scans the maps directory and creates the list of available
 			maps.'''
-		self.mapList = ['testmap 1','testmap 2','testmap 3','testmap 4']
+		
+		for m in self.gameclient.maps:
+			self.mapList.append(m.name)
 		self.playerList = ['player 1','player 2','player 3','player 4','player 5']
-		self.gameList = ['game 1','game 2','game 3','game 4','game 5']
+		self.gameList = []
 		
 	def startGame(self):
 		print('Start game:')
@@ -156,6 +179,7 @@ class SingleForm(Form):
 		self.add(DropDown(self.parentmenu.mapList, defaultMap, pos=Vec2(self.parentmenu.menupad[0]+50,self.parentmenu.menupad[2]), size=Vec2(280,20)))
 
 class MultiForm(Form):
+	''' Multi player game menu.'''
 	def __init__(self, parentmenu):
 		Form.__init__(self,'Multiplayer Game',pos=parentmenu.menupos, size=parentmenu.menusize)
 		self.parentmenu = parentmenu
@@ -169,8 +193,12 @@ class MultiForm(Form):
 		password = ''
 		port     = self.parentmenu.clientconnection.getPort()
 		
-		self.add(Lable('Username:',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2])))
-		self.i_username = Input(username, pos=Vec2(self.parentmenu.menupad[0]+60,self.parentmenu.menupad[2]))
+		self.add(Lable('Username:',\
+				pos=Vec2(self.parentmenu.menupad[0],\
+						 self.parentmenu.menupad[2])))
+		self.i_username = Input(username,\
+				pos=Vec2(self.parentmenu.menupad[0]+60,\
+						 self.parentmenu.menupad[2]))
 		self.add(self.i_username)
 		self.add(Lable('Password:',pos=Vec2(self.parentmenu.menupad[0]+200,self.parentmenu.menupad[2])))
 		self.i_password = Input(password, pos=Vec2(self.parentmenu.menupad[0]+260,self.parentmenu.menupad[2]))
@@ -184,7 +212,8 @@ class MultiForm(Form):
 		self.add(Button('Create Server',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+50), onClick=self.createServer))
 		self.add(Button('Connect',pos=Vec2(self.parentmenu.menusize[0]-90,self.parentmenu.menupad[2]+50), onClick=self.connect))
 		self.add(Lable('Games:',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+70)))
-		self.add(SelectList(self.parentmenu.gameList, pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+90), size=Vec2(200,200)))
+		self.l_games = SelectList(self.parentmenu.gameList, pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+90), size=Vec2(200,200))
+		self.add(self.l_games)
 		
 		self.add(Button('Main Menu',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.showMain))
 		self.add(Button('Join',pos=Vec2(self.parentmenu.menusize[0]-self.parentmenu.menupad[1]-50,self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.startGame))
@@ -193,27 +222,56 @@ class MultiForm(Form):
 		print('create server')
 		
 	def connect(self, button, key, mouse):
+		''' Connect to a server using the info filled in on this form.'''
+		connectDialog = None
+		connected     = False
+		authenticated = False
+		
+		
+		def connectionResponse(resp):
+			if resp:
+				connectDialog.setText('Connected to the server, authenticating...')
+				self.parentmenu.clientconnection.authenticate(username, password, authResponse)
+			else:
+				connectDialog.setText('Connection failed.')
+				
+		def authResponse(resp):
+			if resp:
+				connectDialog.setText('Authenticated. You are connected.')
+				self.parentmenu.clientconnection.getGameList(gameListResponse)
+			else:
+				connectDialog.setText('Authentication failed.')
+		
+		def gameListResponse(games):
+			print(games)
+			for id in games.keys():
+				self.l_games.addOption(games[id])
+				self.parentmenu.gameList.append(games[id])
+			
 		def cancel():
 			print('cancel')
 			self.parentmenu.clientconnection.disconnect()
-			gui.remove(self.connectDialog)
+			gui.remove(connectDialog)
+			del(connectDialog)
 			
-		print('connect')
+		print('connecting...')
+		
+		# Get the values from the form
 		server   = self.i_server.getText()
 		username = self.i_username.getText()
 		password = self.i_password.getText()
 		port     = self.i_port.getText()
-		self.parentmenu.clientconnection.setAddress(server)
-		self.connectDialog = Dialog('Connecting',text='connecting to server %s'%server, pos=Vec2(250,20))
-		gui.add(self.connectDialog)
-		self.parentmenu.clientconnection.connect(server,int(port),3000,self.doneConnecting)
 		
-	def doneConnecting(self, connected):
-		if connected:
-			self.connectDialog.setText('Connected to the server.')
+		# If everything is ok attempt to connect and use connectDialog to show the status
+		if (server!='' and username!='' and password!='' and port!=''):
+			self.parentmenu.clientconnection.setAddress(server)
+			connectDialog = Dialog('Connecting', text='connecting to server %s'%server, pos=Vec2(250,20))
+			gui.add(connectDialog)
+			self.parentmenu.clientconnection.connect(server, int(port), 3000, connectionResponse)
 		else:
-			self.connectDialog.setText('Connection failed.')
-		del(self.connectDialog)
+			print('You did not fill in the all the values')
+		
+	
 		
 class DisplayForm(Form):
 	''' Display settings menu.'''

@@ -56,7 +56,7 @@ class ClientConnection:
 	_connected      = False
 	_authorized   	= False
 	_connectedGame 	= None
-	_availableGames = {}
+	#_availableGames = {}
 	_respCallback   = {MSG_AUTH_RES: None,
 					   MSG_MAPLIST_RES: None,
 					   MSG_GAMELIST_RES: None,
@@ -76,7 +76,7 @@ class ClientConnection:
 		self._respCallback[MSG_AUTH_RES] = callback
 	
 	def connect(self, address, port, timeout, callback):
-		''' Try to connect to the server.
+		''' Try to connect to the server. If successfull callback is passed 1, else 0.
 			address (String): address for the server
 			port (Int): port to connect to
 			timeout (Int): how long to wait before giving up (milliseconds)'''
@@ -87,14 +87,15 @@ class ClientConnection:
 			self._tcpSocket = self._cManager.openTCPClientConnection(address, port, timeout)
 			self._cReader.addConnection(self._tcpSocket)  # receive messages from server
 			taskMgr.add(self.__readTask,"Poll the connection reader",-40)
-			self._connected = True
+			self._connected = 1
 		except Exception as e:
 			print("Couldn't connect to server: %s"%e)
-			self._connected = False
+			self._connected = 0
 		callback(self._connected)
 		
 	def disconnect(self, callback):
-		''' Disconnect from the server.'''
+		''' Disconnect from the server.
+			If successful callback is passed 1, else 0.'''
 		if self._connected:
 			print('Disconnecting...')
 			pkg = NetDatagram()
@@ -102,10 +103,10 @@ class ClientConnection:
 			self._cWriter.send(pkg, self._tcpSocket)
 			self._cManager.closeConnection(self._tcpSocket)
 			self._connected = False
-			if callback != None: callback(True)
+			if callback != None: callback(1)
 		else:
 			print('Can not disconnect, we are not connected.')
-			if callback != None: callback(False)
+			if callback != None: callback(0)
 	
 	def getAddress(self):
 		return self._address
@@ -114,7 +115,11 @@ class ClientConnection:
 		return self._callback
 	
 	def getGameList(self, callback):
-		pass
+		''' Sends a request for a list of active games to the server.
+			On success callback is passed a dictionary of the form,
+			{id: 'descriptive string'}.'''
+		self.__sendGameListReq()
+		self._respCallback[MSG_GAMELIST_RES] = callback
 		
 	def getPort(self):
 		return self._port
@@ -193,10 +198,10 @@ class ClientConnection:
 		if self._connected:
 			print("Sending authorization")
 			h = hashlib.sha256()
-			h.update(PASS)
+			h.update(password)
 			pkg = NetDatagram()
 			pkg.addUint16(MSG_AUTH_REQ)
-			pkg.addString(USER)
+			pkg.addString(username)
 			pkg.addString(h.hexdigest())
 			self._cWriter.send(pkg, self._tcpSocket)
 		else:
@@ -211,7 +216,7 @@ class ClientConnection:
 		accept = data.getUint32()
 		if (accept == 0):
 			print("Authorization for server is denied.")
-			self.__disconnect()
+			self.disconnect(None)
 		elif (accept == 1):
 			print("You are already connected to this server. This could be due to an unclean disconnect.")
 		elif (accept == 2):
@@ -221,7 +226,7 @@ class ClientConnection:
 		self._respCallback[MSG_AUTH_RES](accept)
 		self._respCallback[MSG_AUTH_RES] = None
 	
-	def sendGameListReq(self):
+	def __sendGameListReq(self):
 		''' Request a list of games on the connected server.'''
 		if (self._connected and self._authorized):
 			pkg = NetDatagram()
@@ -242,11 +247,16 @@ class ClientConnection:
 			map         = data.getString()
 			startTime   = data.getUint32()
 			turnNumber  = data.getUint32()
+			indicator   = data.getString()
 			games[id] = '%s -  %d - %s - %d - %d'%(name, maxPlayers, map, startTime, turnNumber)
-			print('%d: %s'%(id,games[id]))
-		self._availableGames = games
+			#print('%d: %s'%(id,games[id]))
+		
+		# If there is a callback function pass the game list to it
+		if self._respCallback[MSG_GAMELIST_RES]:
+			self._respCallback[MSG_GAMELIST_RES](games)
+		#self._availableGames = games
 	
-	def sendNewGameReq(self, name, map, maxplayers):
+	def __sendNewGameReq(self, name, map, maxplayers):
 		''' Create a new game on the server.
 			name (String): the name of the game
 			map (String): the name of the map
