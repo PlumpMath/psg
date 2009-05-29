@@ -316,12 +316,15 @@ class ScrollPane(Holder):
 		
 class SelectList(ScrollPane):
 	""" creates a scroll pane with selectable buttons """
+	buttonList = [] # Used to clear buttons
+	
 	def __init__(self,options,pos=Vec2(0,0),size=Vec2(100,100)):
 		ScrollPane.__init__(self,pos,size)
 		for i,option in enumerate(options):
-			button = Button(option, Vec2(0,10+int(i)*20),Vec2(160,20),onClick=self.optionSelect)
+			button = Button(option, Vec2(0,10+int(i)*20),Vec2(160,20),onClick=self.optionSelectSingle)
 			button.skinType = "SELECT_BG"
 			self.add(button)
+			self.buttonList.append(button)
 			
 		self.selected = []
 		self.options = options
@@ -342,14 +345,39 @@ class SelectList(ScrollPane):
 			self.onSelect()
 			return True
 		
+	def optionSelectSingle(self,button,key,mouse):
+			""" selects an option """
+			option = button.getText()
+			if option in self.selected:
+				button.skinType = "SELECT_BG"
+				self.selected.remove(option)
+				button.textNode.setColor(Vec4(1,1,1,1))
+			else:
+				button.skinType = "SELECT_HIGHLIGHT"
+				self.selected=[option]
+				button.textNode.setColor(Vec4(1,0,0,0))#*gui.theme.SELECT_OPTION_COLOR))
+			button.regenerate = True
+			gui.redraw()
+			self.onSelect()
+			return True
+		
 	def onSelect(self):
 		""" sub class this """
 	
 	def addOption(self, option):
 		i = len(self.options)
-		button = Button(option, Vec2(0,10+int(i)*20),Vec2(160,20),onClick=self.optionSelect)
+		print('i=%s'%i)
+		self.options.append(option)
+		button = Button(option, Vec2(0,10+int(i)*20),Vec2(160,20),onClick=self.optionSelectSingle)
 		button.skinType = "SELECT_BG"
 		self.add(button)
+		self.buttonList.append(button)
+	
+	def clear(self):
+		for b in self.buttonList:
+			b.hide()
+			del(b)
+		self.options = []
 		
 class Form(Frame):
 	"""
@@ -461,7 +489,7 @@ class Menu(Frame):
 			button = Button(name, Vec2(0,10+int(i)*20),Vec2(160,16),onClick=self.menuSelect)
 			self.add(button)
 			i += 1
-		 
+			
 	def menuSelect(self,button,keys,mouse):
 		""" called when one of the menus have been selected """
 		print(mouse)
@@ -470,8 +498,9 @@ class Menu(Frame):
 				fun(*args)
 				 
 class DropDown(Holder):
-	"""Creates a drop down list. The size is the size of the individual buttons.
-	The the size of the holder is calculated from the number of options."""
+	''' Creates a drop down list. The size is the size of the individual buttons.
+		The the size of the holder is calculated from the number of options.
+	'''
 	height = 20
 	def __init__(self, options, default, pos=Vec2(0,0),size=Vec2(100,20)):
 		buttonWidth = size.getX()
@@ -526,8 +555,10 @@ class Dialog(Form):
 		else: self.cancelFunc = cancelFunc
 		self.message = Lable(text, pos=Vec2(10,15))
 		self.add(self.message)
-		self.add(Button('Ok',pos=Vec2(5,size[1]-20), size=Vec2(30,20), onClick=self.okFunc))
-		self.add(Button('Cancel',pos=Vec2(size[0]-35,size[1]-20), size=Vec2(40,20), onClick=self.cancelFunc))
+		self.b_ok     = Button('Ok',pos=Vec2(5,size[1]-20), size=Vec2(30,20), onClick=self.okFunc)
+		self.b_cancel = Button('Cancel',pos=Vec2(size[0]-35,size[1]-20), size=Vec2(40,20), onClick=self.cancelFunc)
+		self.add(self.b_ok)
+		self.add(self.b_cancel)
 		
 	def setText(self, msg):
 		self.message.setText(msg)
@@ -541,7 +572,10 @@ class Dialog(Form):
 		print('Cancel')
 		self.toggle()
 		gui.remove(self)
-			
+	
+	def setOkFunc(self, func):
+		self.b_ok.onClick = func
+		
 class Alert(Form):
 	def __init__(self, title, text='', pos=Vec2(0,0), size=Vec2(170,100), okFunc=None):
 		Form.__init__(self,title, pos, size)
@@ -550,17 +584,12 @@ class Alert(Form):
 		self.message = Lable(text, pos=Vec2(10,15))
 		self.add(self.message)
 		self.add(Button('Ok',pos=Vec2(5,size[1]-20), size=Vec2(30,20), onClick=self.okFunc))
-		self.add(Button('Cancel',pos=Vec2(size[0]-35,size[1]-20), size=Vec2(40,20), onClick=self.cancelFunc))
+		self.add(Button('Cancel',pos=Vec2(size[0]-35,size[1]-20), size=Vec2(40,20), onClick=self.okFunc))
 		
 	def setText(self, msg):
 		self.message.setText(msg)
 		
 	def onOk(self,button,keys,mouse):
 		print('OK')
-		self.toggle()
-		gui.remove(self)
-		
-	def onCancel(self,button,keys,mouse):
-		print('Cancel')
 		self.toggle()
 		gui.remove(self)

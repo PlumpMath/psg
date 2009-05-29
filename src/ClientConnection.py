@@ -7,7 +7,7 @@
 	References:		None
 	Restrictions:	None
 	License:		TBD
-	Notes:			
+	Notes:			TODO - Add timer to callbacks for timeouts
 	'''
 
 # Python imports
@@ -31,6 +31,8 @@ MSG_GAMELIST_REQ   = 5
 MSG_GAMELIST_RES   = 6
 MSG_NEWGAME_REQ    = 7
 MSG_NEWGAME_RES    = 8 # 0=Failed, 1=Succeeded
+MSG_JOINGAME_REQ   = 9
+MSG_JOINGAME_RES   = 10
 MSG_CHAT_REQ       = 27
 MSG_CHAT_RES       = 28
 MSG_UNITMOVE_REQ   = 29
@@ -130,11 +132,13 @@ class ClientConnection:
 	def isConnected(self):
 		return self._connected
 		
-	def joinGame(self, callback):
-		pass
+	def joinGame(self, gameid, callback):
+		self.__sendJoinGameReq(gameid)
+		self._respCallback[MSG_JOINGAME_RES] = callback
 	
-	def newGame(self, callback):
-		pass
+	def newGame(self, name, map, maxplayers, callback):
+		self.__sendNewGameReq(name, map, maxplayers)
+		self._respCallback[MSG_NEWGAME_RES] = callback
 		
 	def setAddress(self, address):
 		self._address = address
@@ -184,6 +188,8 @@ class ClientConnection:
 			self.__recieveGameListRes(data, msgID, client)
 		elif (msgID == MSG_NEWGAME_RES):
 			self.__recieveNewGameRes(data, msgID, client)
+		elif (msgID == MSG_JOINGAME_RES):
+			self.__recieveJoinGameRes(data, msgID, client)
 		elif (msgID == MSG_DISCONNECT_REQ):
 			self.__recieveDisconnectReq(data, msgID, client)
 		else:
@@ -223,8 +229,9 @@ class ClientConnection:
 			print("Authorization granted")
 			self._authorized = True
 		# Let the requestor know the response then clear the callback
-		self._respCallback[MSG_AUTH_RES](accept)
-		self._respCallback[MSG_AUTH_RES] = None
+		if self._respCallback[MSG_AUTH_RES]:
+			self._respCallback[MSG_AUTH_RES](accept)
+			self._respCallback[MSG_AUTH_RES] = None
 	
 	def __sendGameListReq(self):
 		''' Request a list of games on the connected server.'''
@@ -238,7 +245,7 @@ class ClientConnection:
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
 			client (Connection): the connection that this datagram came from'''
-		games = {}
+		games = []
 		indicator = data.getString()
 		while (indicator != 'EOT'):
 			id          = data.getUint32()
@@ -248,8 +255,13 @@ class ClientConnection:
 			startTime   = data.getUint32()
 			turnNumber  = data.getUint32()
 			indicator   = data.getString()
-			games[id] = '%s -  %d - %s - %d - %d'%(name, maxPlayers, map, startTime, turnNumber)
-			#print('%d: %s'%(id,games[id]))
+			games.append({'Id':id,
+						  'Name':name,
+						  'MaxPlayers':maxPlayers,
+						  'Map':map,
+						  'StartTime':startTime,
+						  'TurnNumber':turnNumber,
+						  'String':'%s %s %s %s %s'%(name,maxPlayers,map,startTime,turnNumber)})
 		
 		# If there is a callback function pass the game list to it
 		if self._respCallback[MSG_GAMELIST_RES]:
@@ -261,7 +273,7 @@ class ClientConnection:
 			name (String): the name of the game
 			map (String): the name of the map
 			maxplayers (Int): the max players allowed'''
-		print('Sending new game request')
+		print('Sending new game request %s'%map)
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_NEWGAME_REQ)
 		pkg.addString(name)
@@ -271,19 +283,35 @@ class ClientConnection:
 		
 	def __recieveNewGameRes(self, data, msgID, client):
 		''' Recieve the response of our attempt to create a new game.'''
-		print('Recieving new game response')
+		#print('Recieving new game response')
 		game_created = data.getUint32()
-		print(game_created)
-		if game_created:
-			print('Game created successfully')
-		elif not game_created:
-			print('Game creation failed')
-		else:
-			print('I do not know what happened to the game')
+		
+		# If there is a callback function pass the response to it
+		if self._respCallback[MSG_NEWGAME_RES]:
+			self._respCallback[MSG_NEWGAME_RES](game_created)
+			self._respCallback[MSG_NEWGAME_RES] = None
+			
+	def __sendJoinGameReq(self, id):
+		''' Join a game on the server.
+			id (int): the id of the game to join'''
+		print('Sending join game request')
+		pkg = NetDatagram()
+		pkg.addUint16(MSG_JOINGAME_REQ)
+		pkg.addUint32(id)
+		self._cWriter.send(pkg, self._tcpSocket)
+	
+	def __recieveJoinGameRes(self, data, msgID, client):
+		join_response = data.getUint32()
+		print("We got a response of %d"%join_response)
+		
+		# If there is a callback function pass the response to it
+		if self._respCallback[msgID]:
+			self._respCallback[msgID](join_response)
+			self._respCallback[msgID] = None
 	
 	def __recieveDisconnectReq(self, data, msgID, client):
 		print("Server told us it was leaving! Disconecting")
-		self._cManager.closeConnection(self.__tcpSocket)
+		self._cManager.closeConnection(self._tcpSocket)
 		self._connected = False
 		
 	def __del__(self):

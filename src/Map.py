@@ -96,7 +96,9 @@ class SerializableMap:
 	def getMap(self):
 		''' Create relevant objects for each dictionary entry in each
 			dictionary and return lists of the created objects.'''
-			
+		
+		print("planets %s"%str(self._planets))
+		
 		playerObjs = []
 		planetObjs = []
 		planetReps = []
@@ -141,8 +143,9 @@ class SerializableMap:
 							 hpr=planetDict['hpr'],
 							 model=planetDict['rep'])
 			
-			
-		return (playerObjs, (planetObjs,planetReps), (shipObj,shipReps))
+		planets = (planetObjs,planetReps)
+		ships   = (shipObjs,shipReps)
+		return (playerObjs, planets, ships)
 		
 	def getMapDicts(self):
 		''' Just return each list of dictionaries.'''

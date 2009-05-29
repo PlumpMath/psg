@@ -31,6 +31,8 @@ from gui.keys import Keys
 from gui.psgtheme import PSGTheme
 from gui.mainmenu import MainScreen
 from ClientConnection import ClientConnection
+from Game import ClientGame
+
 
 class GameClient(DirectObject):
 	'''Initialize the client. Loads settings, shows the main game menu, sets up and runs the game'''
@@ -44,7 +46,7 @@ class GameClient(DirectObject):
 		self.maps               = []
 		self.players            = []
 		self.clientconnection   = ClientConnection()
-		self.game               = Game()
+		self.game               = ClientGame()
 		# These will be initialized upon starting the actual game
 		self.viewstate          = None
 		self.gamestatemgr       = None
@@ -80,57 +82,6 @@ class GameClient(DirectObject):
 		
 		# Show the main menu which will call start game
 		self.menu = MainScreen(self, self.clientconnection)
-		
-		#self.startGame()
-		
-	def temp(self):
-		from Map import SerializableMap
-		from Player import SerializablePlayer
-		
-		
-		p = SerializablePlayer(name="Chad the Destroyer", faction='Terrans', type='Human',
-				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
-		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
-		cPickle.dump(p, fh)
-		fh.close()
-		
-		p = SerializablePlayer(name="Gorath", faction='Protath', type='ComputerAI',
-				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
-		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
-		cPickle.dump(p, fh)
-		fh.close()
-		
-		p = SerializablePlayer(name="Chilrog", faction='Protath', type='ComputerAI',
-				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
-		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
-		cPickle.dump(p, fh)
-		fh.close()
-		
-		m = SerializableMap()
-		m.name = 'The Battle of Gorath'
-		m.mapSize = (150,150,40)
-		startingPlanets = 1
-		
-		m.addPlayer('Chad the Destroyer', faction='Terrans', type='Human', ai='None')
-		m.addPlayer('Gorath', faction='Protath', type='Computer', ai='Gorath')
-		m.addPlayer('Chilrog', faction='Protath', type='Computer', ai='Chilrog')
-		
-		m.addPlanet(self, (100,100,10), owner='Chad the Destroyer', rep='planet_01')
-		m.addPlanet(self, (-100,-50,-30), owner='Gorath', rep='planet_01')
-		m.addPlanet(self, (50,-100,0), owner='Chilrog', rep='planet_01')
-		m.addPlanet(self, (20,20,20), owner='None', rep='planet_01')
-		m.addPlanet(self, (-50,-100,-20), owner='None', rep='planet_01')
-		m.addPlanet(self, (-20,-20,0), owner='None', rep='planet_01')
-		m.addPlanet(self, (0,0,0), owner='None', rep='planet_01')
-		
-		m.addShip('LightCapture', pos=(110,110,10), hpr=(0,0,0), owner='Chad the Destroyer', rep='ship_03')
-		m.addShip('LightCapture', pos=(-110,-50,-30), hpr=(0,0,0), owner='Gorath', rep='ship_03')
-		m.addShip('LightCapture', pos=(50,-110,0), hpr=(0,0,0), owner='Chilrog', rep='ship_03')
-		
-		fh = open('data/maps/' + m.name.replace(' ', ''),'wb')
-		cPickle.dump(m, fh)
-		fh.close()
-		
 		
 	def createGame(self):
 		''' If we are playing a single player game or hosting a multiplayer game
@@ -182,11 +133,18 @@ class GameClient(DirectObject):
 
 		base.camLens.setFov(60.0)
 			
-	def startGame(self):
+	def startGame(self, game):
+		# Kill current screen
+		del(self.menu)
+		del(self.gui)
+		
 		# Some of this will be moved to createGame / loadGame
 		self.makeGameEngine()
 		if GameSettings().getSetting('SHOWFPS') == "True":
 			base.setFrameRateMeter(True)
+		
+		print('  In GameClient - map = %s'%game['Map'])
+		clientgame = ClientGame(id=game['Id'], name=game['Name'], maxplayers=game['MaxPlayers'], map=game['Map'], starttime=game['StartTime'], turnnumber=game['TurnNumber'])
 		
 		self.viewstate = ViewStateMgr.ViewStateManager()
 		self.viewstate.addView(View.GameView())
@@ -194,7 +152,7 @@ class GameClient(DirectObject):
 		self.gamestate = GameStateMgr.GameStateManager()
 		self.keyboardcontroller = Controller.KeyboardController()
 		self.mousecontroller = Controller.MouseController()
-		self.gamestate.newGame()
+		self.gamestate.newGame(clientgame)
 		#self.gameFrame = GameWindow()
 		
 	def exitGame(self, event):
@@ -207,12 +165,45 @@ class GameClient(DirectObject):
 			self.clientconnection.disconnect(None)
 		sys.exit(0)
 		
-class Game:
-	gametype = 'Single'
-	gamemap = None
-	players = None
-	server  = None
-	
-	
-	
-	
+	def temp(self):
+		''' This is a temporary function to create some initial players and maps.
+			Delete me later!'''
+		from Map import SerializableMap
+		from Player import SerializablePlayer
+		
+		p = SerializablePlayer(name="Chad the Destroyer", faction='Terrans', type='Human',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		p = SerializablePlayer(name="Gorath", faction='Protath', type='ComputerAI',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		p = SerializablePlayer(name="Chilrog", faction='Protath', type='ComputerAI',
+				 ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		fh = open('data/players/' + p.name.replace(' ', ''),'wb')
+		cPickle.dump(p, fh)
+		fh.close()
+		
+		m = SerializableMap()
+		m.name = 'The Battle of Gorath'
+		m.mapSize = (150,150,40)
+		startingPlanets = 1
+		m.addPlayer('Chad the Destroyer', faction='Terrans', type='Human', ai='None')
+		m.addPlayer('Gorath', faction='Protath', type='Computer', ai='Gorath')
+		m.addPlayer('Chilrog', faction='Protath', type='Computer', ai='Chilrog')
+		m.addPlanet(self, (100,100,10), owner='Chad the Destroyer', rep='planet_01')
+		m.addPlanet(self, (-100,-50,-30), owner='Gorath', rep='planet_01')
+		m.addPlanet(self, (50,-100,0), owner='Chilrog', rep='planet_01')
+		m.addPlanet(self, (20,20,20), owner='None', rep='planet_01')
+		m.addPlanet(self, (-50,-100,-20), owner='None', rep='planet_01')
+		m.addPlanet(self, (-20,-20,0), owner='None', rep='planet_01')
+		m.addPlanet(self, (0,0,0), owner='None', rep='planet_01')
+		m.addShip('LightCapture', pos=(110,110,10), hpr=(0,0,0), owner='Chad the Destroyer', rep='ship_03')
+		m.addShip('LightCapture', pos=(-110,-50,-30), hpr=(0,0,0), owner='Gorath', rep='ship_03')
+		m.addShip('LightCapture', pos=(50,-110,0), hpr=(0,0,0), owner='Chilrog', rep='ship_03')
+		fh = open('data/maps/' + m.name.replace(' ', ''),'wb')
+		cPickle.dump(m, fh)
+		fh.close()

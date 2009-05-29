@@ -7,9 +7,18 @@
 	References:		None
 	Restrictions:	None
 	License:		TBD
-	Notes:			TODO - Make the PSGServer a singleton.
+	Notes:			TODO - Document the communication protocol (and make it
+							consistent).
+						 - Make the PSGServer a singleton.
 						 - Add a clean command to clear abandoned connections
+						 - Add a periodic ping to check dead connections
 '''
+
+# Python imports
+import sys, hashlib, platform, time, os
+from datetime import datetime
+
+# Panda imports
 from pandac.PandaModules import loadPrcFileData
 loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'client-sleep 0.01')
@@ -24,8 +33,9 @@ from pandac.PandaModules import NetAddress
 from pandac.PandaModules import NetDatagram
 from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
-import sys, hashlib, platform, time
-from datetime import datetime
+
+# PSG imports
+
 
 OS_TYPE = platform.system()
 if (OS_TYPE == 'Linux'):
@@ -51,6 +61,8 @@ MSG_GAMELIST_REQ   = 5
 MSG_GAMELIST_RES   = 6
 MSG_NEWGAME_REQ    = 7
 MSG_NEWGAME_RES    = 8 # 0=Failed, 1=Succeeded
+MSG_JOINGAME_REQ   = 9
+MSG_JOINGAME_RES   = 10
 MSG_CHAT_REQ       = 27
 MSG_CHAT_RES       = 28
 MSG_UNITMOVE_REQ   = 29
@@ -85,7 +97,65 @@ def releaseGameID(id):
 		GAME_IDS.sort()
 	else: return -1
 	
+MAPLIST = []
+def reloadMaps():
+	''' A helper function to create a dictionary of available map files. The
+		dictionary format is {filename:md5sum}.'''
+	global MAPLIST
+	MAPLIST = []
+	# List all map files
+	for f in os.listdir('data/maps'):
+		if (os.path.splitext(f)[1] == '.map'):
+			check = hashlib.md5(file('data/maps/'+f,'rb').read()).hexdigest()
+			MAPLIST.append({f:check})
+			
+def getMap(filename):
+	for m in MAPLIST:
+		if filename in m.keys():
+			return m
+	return None
+		
 
+#_GAME_CLASS___________________________________________________________________
+class ServerGame:
+	''' The game class stores all information for active games. It also handles
+		passing messages between connected clients.'''
+	id         = 0
+	name       = 'New Game'
+	players    = [] # List of Clients
+	maxPlayers = 2
+	map        = None #{name: md5sum}
+	mapName    = 'None'
+	turnNumber = 0
+	startTime  = None
+	
+	def __init__(self, name, maxplayers, mapname):
+		''' Creates a new game.
+			id (Int): the unique id of this game
+			name (String): the name of this game
+			maxplayers (Int): maximum players allowed to participate
+			map (String): the file name of the map being used'''
+		self.id         = getGameID()
+		if (self.id < 0):
+			print('Error getting a game ID!')
+		self.name       = name
+		self.maxPlayers = maxplayers
+		self.startTime  = int(time.time())
+		self.mapName    = mapname
+		self.setMap(mapname)
+
+	def setMap(self, mapname):
+		if (mapname != None and mapname != ''):
+			self.mapFile    = mapname.replace(' ','')+'.map'
+			self.mapCheck   = hashlib.md5(file('data/maps/'+self.mapFile,'rb').read()).hexdigest()
+			
+	def addPlayer(self, player):
+		''' Adds a player to the game.
+			player (User): the user to be added to the game'''
+		self.players.append(player)
+		
+	def __del__(self):
+		releaseGameID(self.id)
 
 #_USER_CLASS___________________________________________________________________
 class User:
@@ -132,43 +202,6 @@ class User:
 		self.connected = False
 		self.connectedTime = None
 
-#_GAME_CLASS___________________________________________________________________
-class Game:
-	''' The game class stores all information for active games. It also handles
-		passing messages between connected clients.'''
-	id         = 0
-	name       = 'New Game'
-	players    = []
-	maxPlayers = 2
-	map        = None
-	mapName    = 'None'
-	turnNumber = 0
-	startTime  = None
-	
-	def __init__(self, name, maxplayers, map):
-		''' Creates a new game.
-			id (Int): the unique id of this game
-			name (String): the name of this game
-			maxplayers (Int): maximum players allowed to participate
-			map (String): the name of the map being used'''
-		self.id         = getGameID()
-		if (self.id < 0):
-			print('Error getting a game ID!')
-		self.name       = name
-		self.maxPlayers = maxplayers
-		self.map        = map
-		if self.map != None: self.mapName = self.map.name
-		self.startTime  = int(time.time())
-		
-		
-	def addPlayer(self, player):
-		''' Adds a player to the game.
-			player (User): the user to be added to the game'''
-		self.players.append(player)
-		
-	def __del__(self):
-		releaseGameID(self.id)
-
 #_PSGSERVER____________________________________________________________________
 class PSGServer():
 	''' The main server that listens for connections and manages active games.
@@ -193,7 +226,9 @@ class PSGServer():
 		self._cWriter   = ConnectionWriter(self._cManager,0)
 		
 		#TODO - Load user file (DB)
-		#TODO - Load maps
+		
+		#Load maps
+		reloadMaps()
 		
 		self._tcpSocket = self._cManager.openTCPServerRendezvous(PORT,BACKLOG)
 		self._cListener.addConnection(self._tcpSocket)
@@ -207,7 +242,7 @@ class PSGServer():
 		
 		# Build some test games
 		for i in range(4):
-			g = Game('Test game - %d'%i, i, None)
+			g = ServerGame('Test game - %d'%i, i, '')
 			self.games.append(g)
 			
 		print('Server initialized')
@@ -220,7 +255,7 @@ class PSGServer():
 			rendezvous = PointerToConnection()
 			netAddress = NetAddress()
 			newConnection = PointerToConnection()
-            
+			
 			if self._cListener.getNewConnection(rendezvous,netAddress,newConnection):
 				newConnection = newConnection.p()
 				self.clients[newConnection] = None
@@ -262,6 +297,9 @@ class PSGServer():
 		elif (msgID == MSG_NEWGAME_REQ):
 			print('SENDING NEWGAME RES')
 			self.__handleNewGame(data, msgID, client)
+		elif (msgID == MSG_JOINGAME_REQ):
+			print('SENDING JOINGAME RES')
+			self.__handleJoinGame(data, msgID, client)
 		elif (msgID == MSG_DISCONNECT_REQ):
 			print('SENDING DISCONNECT RES')
 			self.__handleDisconnect(data, msgID, client)
@@ -327,18 +365,50 @@ class PSGServer():
 		maxPlayers = data.getUint32()
 		self.__printNotice('%s: Request for new game: %s, %s, %d.' %(client.getAddress().getIpString(),name,map,maxPlayers))
 		
-		newGame = Game(name, maxPlayers, map)
+		newGame = ServerGame(name, maxPlayers, map)
 		
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_NEWGAME_RES)
 		if newGame:
-			print('newgame success')
+			#print('newgame success')
 			self.games.append(newGame)
 			pkg.addUint32(1)
 		else:
-			print('newgame failed')
+			#print('newgame failed')
 			pkg.addUint32(0)
 		self._cWriter.send(pkg, client)
+		
+	def __handleJoinGame(self, data, msgID, client):
+		''' Add client to the requested game.
+			data (PyDatagramIterator): the list of data sent with this datagram
+			msgID (Int): the message ID
+			client (Connection): the connection that tendNehis datagram came from'''
+		id = data.getUint32()
+		resp = 0
+		
+		# Get the game
+		game = None
+		for g in self.games:
+			if g.id == id:
+				game = g
+		
+		pkg = NetDatagram()
+		pkg.addUint16(MSG_JOINGAME_RES)
+		
+		if game == None:
+			print('No such game')
+			resp = 0
+		elif len(game.players) >= game.maxPlayers:
+			print('Game full')
+			resp = 1
+		else:
+			game.addPlayer(client)
+			print('OK')
+			resp = 2
+			
+		pkg.addUint32(resp)
+		self._cWriter.send(pkg, client)
+		self.__printNotice('%s: Request to join game id %d, gave %d.'%(client.getAddress().getIpString(),id,resp))
 		
 	def __handleDisconnect(self, data, msgID, client):
 		''' Disconnect and send confirmation to the client.
@@ -402,7 +472,13 @@ class PSGServer():
 		return Task.cont
 	
 	def __handleCommand(self):
-		''' Call the appropriate handler for the current console command.'''
+		''' Call the appropriate handler for the current console command.
+		exit
+		lsconn
+		lsusers
+		lsgames
+		kill		-c# -u# -g#
+		reload		-m (maps)'''
 		if (len(self._commandTok) > 0):
 			if self._commandTok[0] == 'exit':
 				self.__quit()

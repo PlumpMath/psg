@@ -7,7 +7,7 @@
 	References:		None
 	Restrictions:	None
 	License:		TBD
-	Notes:			None
+	Notes:			This is a HUGE mess! Clean this up.
 '''
 
 # Python imports
@@ -124,8 +124,17 @@ class MainScreen:
 		self.playerList = ['player 1','player 2','player 3','player 4','player 5']
 		self.gameList = []
 		
-	def startGame(self):
+	def startGame(self, game):
 		print('Start game:')
+		self.background.destroy()
+		self.main.hide()
+		self.single.hide()
+		self.multi.hide()
+		del(self.main)
+		del(self.single)
+		del(self.multi)
+		self.gameclient.startGame(game)
+		
 
 class MainForm(Form):
 	''' The main game menu'''
@@ -189,8 +198,8 @@ class MultiForm(Form):
 		self.things[0].onClick=lambda b,k,m : None
 		
 		server   = self.parentmenu.clientconnection.getAddress()
-		username = ''
-		password = ''
+		username = 'chad'
+		password = 'password1'
 		port     = self.parentmenu.clientconnection.getPort()
 		
 		self.add(Lable('Username:',\
@@ -209,17 +218,58 @@ class MultiForm(Form):
 		self.add(Lable('Port:',pos=Vec2(self.parentmenu.menupad[0]+200,self.parentmenu.menupad[2]+25)))
 		self.i_port = Input(port, pos=Vec2(self.parentmenu.menupad[0]+260,self.parentmenu.menupad[2]+25), size=Vec2(130,20))
 		self.add(self.i_port)
-		self.add(Button('Create Server',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+50), onClick=self.createServer))
+		self.add(Button('Create Game',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+50), onClick=self.createGame))
 		self.add(Button('Connect',pos=Vec2(self.parentmenu.menusize[0]-90,self.parentmenu.menupad[2]+50), onClick=self.connect))
 		self.add(Lable('Games:',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+70)))
-		self.l_games = SelectList(self.parentmenu.gameList, pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+90), size=Vec2(200,200))
+		self.l_games = SelectList([], pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+90), size=Vec2(200,200))
 		self.add(self.l_games)
 		
 		self.add(Button('Main Menu',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.showMain))
-		self.add(Button('Join',pos=Vec2(self.parentmenu.menusize[0]-self.parentmenu.menupad[1]-50,self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.startGame))
+		self.add(Button('Join',pos=Vec2(self.parentmenu.menusize[0]-self.parentmenu.menupad[1]-50,self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.joinGame))
 	
-	def createServer(self, button, key, mouse):
-		print('create server')
+	def updateGameList(self):
+		''' Request game list from the server and update the local list upon
+			response.'''
+		print("updating game list now")
+		def response(games):
+			self.parentmenu.gameList = games
+			self.l_games.clear()
+			for g in games:
+				self.l_games.addOption(g['String'])
+		self.parentmenu.clientconnection.getGameList(response)
+		
+	def createGame(self, button, key, mouse):
+		print('create game')
+		createGameDialog = None
+		
+		def createResponse(resp):
+			print('Game created, updating list')
+			if (resp):
+				createGameDialog.l_status.setText('Game created.')
+				# Make ok button exit dialog
+				createGameDialog.setOkFunc(onCancel)
+				self.updateGameList()
+			else:
+				print('Game was not created')
+				
+		def onOk(button, key, mouse):
+			print('Ok')
+			name = createGameDialog.i_name.getText()
+			map  = createGameDialog.d_map.getOption()
+			maxplayers = createGameDialog.i_maxplayers.getText()
+			self.parentmenu.clientconnection.newGame(name, map, maxplayers, createResponse)
+			
+		def onCancel(button, key, mouse):
+			print('Cancel')
+			createGameDialog.toggle()
+			gui.remove(createGameDialog)
+		
+		if self.parentmenu.clientconnection.isConnected():
+			createGameDialog = CreateGameDialog(self.parentmenu, okFunc=onOk, cancelFunc=onCancel)
+			gui.add(createGameDialog)
+		else:
+			createGameDialog = Alert('Oops!', text='Can not create game, we are not connected', pos=Vec2(250,20))
+			gui.add(createGameDialog)
 		
 	def connect(self, button, key, mouse):
 		''' Connect to a server using the info filled in on this form.'''
@@ -238,16 +288,10 @@ class MultiForm(Form):
 		def authResponse(resp):
 			if resp:
 				connectDialog.setText('Authenticated. You are connected.')
-				self.parentmenu.clientconnection.getGameList(gameListResponse)
+				self.updateGameList()
 			else:
 				connectDialog.setText('Authentication failed.')
-		
-		def gameListResponse(games):
-			print(games)
-			for id in games.keys():
-				self.l_games.addOption(games[id])
-				self.parentmenu.gameList.append(games[id])
-			
+				
 		def cancel():
 			print('cancel')
 			self.parentmenu.clientconnection.disconnect()
@@ -270,8 +314,56 @@ class MultiForm(Form):
 			self.parentmenu.clientconnection.connect(server, int(port), 3000, connectionResponse)
 		else:
 			print('You did not fill in the all the values')
+			
+	def joinGame(self, button=None, key=None, mouse=None):
 		
-	
+		def joinResponse(resp):
+			if resp < 2:
+				print("Couldn't join game")
+			else:
+				self.parentmenu.startGame(game)
+				
+		# Get the selected game
+		if len(self.l_games.selected) > 0:
+			selectedGame = self.l_games.selected[0]
+		else:
+			print("No game selected") # Make this an Alert
+			return
+		
+		# Find the selected game in the gameList and try to join it
+		for g in self.parentmenu.gameList:
+			if g['String'] == selectedGame:
+				# Check if we have the map for the game
+				print("mapList = %s"%str(self.parentmenu.mapList))
+				print("Map = %s"%g['Map'])
+				if g['Map'] not in self.parentmenu.mapList:
+					print('We dont have the map %s, trying to download it'%g['Map'])
+					# TODO - Finish this!
+					return
+				game = g
+				self.parentmenu.clientconnection.joinGame(g['Id'], joinResponse)
+		
+class CreateGameDialog(Dialog):
+	''' Create server dialog.'''
+	def __init__(self, parentmenu, okFunc=None, cancelFunc=None):
+		Dialog.__init__(self, title='Create Game', text='', pos=Vec2(250,20), size=Vec2(270,200), okFunc=okFunc, cancelFunc=cancelFunc)
+		
+		self.parentmenu = parentmenu
+		
+		self.l_status = Lable('', pos=Vec2(10,80))
+		self.add(self.l_status)
+		self.add(Lable('Max Players:',pos=Vec2(10,60)))
+		self.i_maxplayers = Input('3', pos=Vec2(90,60), size=Vec2(20,20))
+		self.add(self.i_maxplayers)
+		self.add(Lable('Map',pos=Vec2(10,40)))
+		self.d_map = DropDown(self.parentmenu.mapList, self.parentmenu.mapList[0], pos=Vec2(90,40), size=Vec2(100,20))
+		self.add(self.d_map)
+		self.add(Lable('Game Name:',pos=Vec2(10,20)))
+		self.i_name = Input('New Game', pos=Vec2(90,20))
+		self.add(self.i_name)
+		
+		
+		
 		
 class DisplayForm(Form):
 	''' Display settings menu.'''

@@ -1,3 +1,18 @@
+''' GameStateMgr.py
+	Author:			Chad Rempp
+	Date:			2009/05/27
+	Purpose:		
+	Usage:			None
+	References:		None
+	Restrictions:	None
+	License:		TBD
+	Notes:			
+'''
+
+# Python imports
+import sys, random, cPickle
+
+# Panda imports
 from pandac.PandaModules import CollisionHandlerQueue
 from pandac.PandaModules import CollisionNode
 from pandac.PandaModules import CollisionRay
@@ -6,19 +21,27 @@ from pandac.PandaModules import GeomNode
 from pandac.PandaModules import Plane
 from pandac.PandaModules import Point3
 from pandac.PandaModules import Vec3
-import sys,  random
+
+# PSG imports
 import Controller
 import GeomObjects
 import Event
 import Entity
 import Player
 from Util import Singleton
+from Game import ClientGame
 
 # GameState---------------------------------------------------------------------
 class GameStateManager:
 	"""A class that keeps track of the game state."""
 	__metaclass__=Singleton
-	players = []
+	
+	gameId     = 0
+	gameName   = ''
+	players    = []
+	turnNumber = 0
+	map        = None
+	startTime  = 0
 	
 	# States
 	s_WaitingForSelection = True
@@ -95,8 +118,40 @@ class GameStateManager:
 				# Enter waitingforselection state
 				self.s_WaitingForSelection = True
 			
-	def newGame(self):
-		"""Create a random game board. For now create a human and computer player with random entities"""
+	def newGame(self, game):
+		
+		self.gameId     = game.id
+		self.gameName   = game.name
+		self.turnNumber = game.turnNumber
+		self.map        = game.mapFile
+		self.startTime  = game.startTime
+		
+		print(self.map)
+		
+		# Load map
+		mapFile = open('data/maps/'+self.map,'rb')
+		serializedMap = cPickle.load(mapFile)
+		(players, planets, ships) = serializedMap.getMap()
+		print('SM - %s'%str(serializedMap._planets))
+		
+		print(planets)
+		# Players
+		for p in players:
+			self.players.append(Player(name=p['name'], faction=p['faction'], type=p['type'],ai=p['ai']))
+			
+		# Planets
+		for e in planets[0]:
+			print(e)
+			self.entitymanager.addEntity(e)
+		
+		# Ships
+		for e in ships[0]:
+			print(e)
+			self.entitymanager.addEntity(e)
+			
+		
+		
+		'''
 		# Create players (for testing just 1 human, 1 computer)
 		self.players.append(Player.Player("Player1"))
 		self.players.append(Player.Player("Computer"))
@@ -120,6 +175,7 @@ class GameStateManager:
 			e.owner = self.players[1].name
 			self.entitymanager.addEntity(e)
 		self.currentPlayer = self.players[0]
+		'''
 		
 	def loadGame(self, gameToLoad):
 		print("loadGame not implemented yet")
