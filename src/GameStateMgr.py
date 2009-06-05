@@ -28,6 +28,7 @@ import GeomObjects
 import Event
 import Entity
 import Player
+import Map
 from Util import Singleton
 from Game import ClientGame
 
@@ -119,19 +120,23 @@ class GameStateManager:
 				self.s_WaitingForSelection = True
 			
 	def newGame(self, game):
-		
+		''' Create game objects from the game object.
+			game (ClientGame).'''
 		self.gameId     = game.id
 		self.gameName   = game.name
 		self.turnNumber = game.turnNumber
-		self.map        = game.mapFile
+		self.mapFileName= game.mapFileName
 		self.startTime  = game.startTime
+		self.mapName    = game.mapName
 		
 		print(self.map)
 		
 		# Load map
-		mapFile = open('data/maps/'+self.map,'rb')
-		serializedMap = cPickle.load(mapFile)
-		(players, planets, ships) = serializedMap.getMap()
+		fh = open(Map.MAP_PATH+self.mapFileName,'rb')
+		serializedMap = cPickle.load(fh)
+		players = serializedMap.getPlayers()
+		planets = serializedMap.getPlanets()
+		ships   = serializedMap.getShips()
 		print('SM - %s'%str(serializedMap._planets))
 		
 		print(planets)
@@ -140,17 +145,15 @@ class GameStateManager:
 			self.players.append(Player(name=p['name'], faction=p['faction'], type=p['type'],ai=p['ai']))
 			
 		# Planets
-		for e in planets[0]:
+		for e in planets:
 			print(e)
 			self.entitymanager.addEntity(e)
 		
 		# Ships
-		for e in ships[0]:
+		for e in ships:
 			print(e)
 			self.entitymanager.addEntity(e)
 			
-		
-		
 		'''
 		# Create players (for testing just 1 human, 1 computer)
 		self.players.append(Player.Player("Player1"))

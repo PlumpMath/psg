@@ -1,4 +1,3 @@
-#from __future__ import nested_scopes
 ''' mainmenu.py
 	Author:			Chad Rempp
 	Date:			2009/05/15
@@ -20,22 +19,13 @@ from gui.controls import *
 from gui.widgets import *
 from Settings import GameSettings
 import Event
+import Map
 
-x_res = 640
-y_res = 480
+# Set current screen resolution
+x_res = base.win.getProperties().getXSize()
+y_res = base.win.getProperties().getYSize()
 
-def tpc(coord,y=False): # To Panda Coordinate
-	''' Helper function to convert from Panda coord system to interger screen
-		coord system.'''
-	
-	ratio   = x_res/y_res # Ratio for aspect2d
-	shifter = x_res/2
-	if y:
-		scaler = -1/shifter
-	else:
-		scaler = ratio/shifter
-	return ((coord - shifter) * scaler)
-
+#_MAINSCREEN_CLASS_____________________________________________________________
 class MainScreen:
 	''' Controls the main menu screen. This is not the actual main menu, this
 		object controls movement between the main menu forms'''
@@ -46,25 +36,12 @@ class MainScreen:
 	
 	_currentmenu = None
 	
-	# Variables to be used in the menus
-	mapList = []
-	playerList = []
-	
-	def __init__(self, gameclient, clientconnection):
-		''' Create the menu forms and draw the background image.
-			game (Game): the game created in the GameClient that the menus
-						will finish setting up
-			clientconnection (ClientConnection): the connection the GameClient
-						made that the menus will use to connect to a server.'''
-						
-		self.menupos    = Vec2((x_res-self.menusize[0])/2,(y_res-self.menusize[1])/2+40)
-		self.mapList    = []
-		self.playerList = []
-		self.gameList   = []
-		self.gameclient = gameclient
-		self.clientconnection = clientconnection
+	def __init__(self):
+		''' Create the menu forms and draw the background image. The main
+			menu also handles changing the current active form.'''
 		
-		self.buildOptionLists()
+		self.menupos    = Vec2((x_res-self.menusize[0])/2,(y_res-self.menusize[1])/2+40)
+		self.gameList   = []
 		
 		# Background image
 		self.background = OnscreenImage(image = 'data/images/menubackground.png',
@@ -83,6 +60,18 @@ class MainScreen:
 		self.multi = MultiForm(self)
 		gui.add(self.multi)
 		self.multi.toggle()
+		
+		self.option = OptionForm(self)
+		gui.add(self.option)
+		self.option.toggle()
+		
+		self.player = PlayerForm(self)
+		gui.add(self.player)
+		self.player.toggle()
+		
+		self.credit = CreditsForm(self)
+		gui.add(self.credit)
+		self.credit.toggle()
 		
 		# Setup menu state
 		self._currentmenu  = self.main
@@ -103,26 +92,23 @@ class MainScreen:
 		self.multi.toggle()
 	
 	def showPlayer(self, button, key, mouse):
-		print('player')
+		self._currentmenu.toggle()
+		self._currentmenu = self.player
+		self.player.toggle()
 	
 	def showOptions(self, button, key, mouse):
-		print('options')
+		self._currentmenu.toggle()
+		self._currentmenu = self.option
+		self.option.toggle()
 	
 	def showCredits(self, button, key, mouse):
-		print('credits')
+		self._currentmenu.toggle()
+		self._currentmenu = self.credit
+		self.credit.toggle()
 	
 	def exit(self, button, key, mouse):
 		print('exit')
 		Event.Dispatcher().broadcast(Event.Event('E_ExitProgram',src=self))
-		
-	def buildOptionLists(self):
-		''' This scans the maps directory and creates the list of available
-			maps.'''
-		
-		for m in self.gameclient.maps:
-			self.mapList.append(m.name)
-		self.playerList = ['player 1','player 2','player 3','player 4','player 5']
-		self.gameList = []
 		
 	def startGame(self, game):
 		print('Start game:')
@@ -133,139 +119,229 @@ class MainScreen:
 		del(self.main)
 		del(self.single)
 		del(self.multi)
-		self.gameclient.startGame(game)
-		
+		gcli.startGame(game)
 
 class MainForm(Form):
 	''' The main game menu'''
-	def __init__(self, parentmenu):
-		Form.__init__(self,'Main Menu',pos=parentmenu.menupos, size=parentmenu.menusize)
-		self.parentmenu = parentmenu
+	def __init__(self, prnt):
+		Form.__init__(self,'Main Menu',pos=prnt.menupos, size=prnt.menusize)
+		
+		self.prnt = prnt
+		
 		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
 		
-		self.add(Button('Single Player',pos=Vec2(150,40), size=(80,20), point=16, onClick=self.parentmenu.showSingle));
-		self.add(Button('Multi Player',pos=Vec2(150,80), size=(80,20), point=16,onClick=self.parentmenu.showMulti));
-		self.add(Button('Player Setup',pos=Vec2(150,120), size=(80,20), point=16,onClick=self.parentmenu.showPlayer));
-		self.add(Button('Options',pos=Vec2(150,160), size=(80,20), point=16,onClick=self.parentmenu.showOptions));
-		self.add(Button('Credits',pos=Vec2(150,200), size=(80,20), point=16,onClick=self.parentmenu.showCredits));
-		self.add(Button('Exit',pos=Vec2(150,240), size=(80,20), point=16,onClick=self.parentmenu.exit));
+		self.add(Button('Single Player',
+				pos=Vec2(150,40),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.showSingle));
+		self.add(Button('Multi Player',
+				pos=Vec2(150,80),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.showMulti));
+		self.add(Button('Player Setup',
+				pos=Vec2(150,120),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.showPlayer));
+		self.add(Button('Options',
+				pos=Vec2(150,160),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.showOptions));
+		self.add(Button('Credits',
+				pos=Vec2(150,200),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.showCredits));
+		self.add(Button('Exit',
+				pos=Vec2(150,240),
+				size=(80,20),
+				point=16,
+				onClick=self.prnt.exit));
 		
 class SingleForm(Form):
 	''' Single player game menu.'''
-	def __init__(self, parentmenu):
-		Form.__init__(self,'Main Menu',pos=parentmenu.menupos, size=parentmenu.menusize)
-		self.parentmenu = parentmenu
+	def __init__(self, prnt):
+		Form.__init__(self,'Main Menu',pos=prnt.menupos, size=prnt.menusize)
+		self.prnt = prnt
 		
+		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
 		
 		# Setup defaults
-		if len(self.parentmenu.mapList) > 0:
-			defaultMap = self.parentmenu.mapList[0]
+		if len(gcli.availableMaps.values()) > 0:
+			defaultMap = gcli.availableMaps.values()[0]
 		else:
 			defaultMap = ''
-		if len(self.parentmenu.playerList) > 0:
-			defaultPlayer = self.parentmenu.playerList[0]
+		if len(gcli.availablePlayers.values()) > 0:
+			defaultPlayer = gcli.availablePlayers.values()[0]
 		else:
 			defaultPlayer = ''
 		
 		# Draw widgets from bottom to top (this is for dropdown menu sort order)
-		self.add(Button('Main Menu',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.showMain))
-		self.add(Button('Start Game',pos=Vec2(self.parentmenu.menusize[0]-self.parentmenu.menupad[1]-50,self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.startGame))
+		self.add(Button('Main Menu',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menusize[1]-self.prnt.menupad[3]-20),
+				onClick=self.prnt.showMain))
+		self.add(Button('Start Game',
+				pos=Vec2(self.prnt.menusize[0]-self.prnt.menupad[1]-50,
+						 self.prnt.menusize[1]-self.prnt.menupad[3]-20),
+				onClick=self.prnt.startGame))
 		
+		# TODO - make the following dependent on the number of players in the
+		# current map. This will likely require a scrolled section
 		r = range(1,5)
 		r.reverse()
 		for i in r:
-			self.add(Lable('Player ' + str(i), pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+30+(30*i))))
-			self.add(DropDown(self.parentmenu.playerList, defaultPlayer, pos=Vec2(self.parentmenu.menupad[0]+60,self.parentmenu.menupad[2]+30+(30*i))))
-			self.add(DropDown(['Human','Computer'], 'Computer', pos=Vec2(self.parentmenu.menupad[0]+220,self.parentmenu.menupad[2]+30+(30*i))))
+			self.add(Lable('Player ' + str(i),
+					pos=Vec2(self.prnt.menupad[0],
+							 self.prnt.menupad[2]+30+(30*i))))
+			self.add(DropDown(gcli.availablePlayers.values(),
+					defaultPlayer,
+					pos=Vec2(self.prnt.menupad[0]+60,
+							 self.prnt.menupad[2]+30+(30*i))))
+			self.add(DropDown(['Human','Computer'],
+					'Computer',
+					pos=Vec2(self.prnt.menupad[0]+220,
+							 self.prnt.menupad[2]+30+(30*i))))
 		
-		self.add(Lable('Map',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2])))
-		self.add(DropDown(self.parentmenu.mapList, defaultMap, pos=Vec2(self.parentmenu.menupad[0]+50,self.parentmenu.menupad[2]), size=Vec2(280,20)))
+		self.add(Lable('Map',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menupad[2])))
+		self.add(DropDown(gcli.availableMaps.values(),
+				defaultMap,
+				pos=Vec2(self.prnt.menupad[0]+50,
+						 self.prnt.menupad[2]),
+				size=Vec2(280,20)))
 
 class MultiForm(Form):
 	''' Multi player game menu.'''
-	def __init__(self, parentmenu):
-		Form.__init__(self,'Multiplayer Game',pos=parentmenu.menupos, size=parentmenu.menusize)
-		self.parentmenu = parentmenu
+	def __init__(self, prnt):
+		Form.__init__(self,'Multiplayer Game',pos=prnt.menupos, size=prnt.menusize)
+		self.prnt = prnt
 		
+		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
 		
-		server   = self.parentmenu.clientconnection.getAddress()
+		# Default values
+		server   = gcli.clientconnection.getAddress()
 		username = 'chad'
 		password = 'password1'
-		port     = self.parentmenu.clientconnection.getPort()
+		port     = gcli.clientconnection.getPort()
+		games    = [] # List of game description strings
+		for g in self.prnt.gameList:
+			games.append(g.description)
 		
-		self.add(Lable('Username:',\
-				pos=Vec2(self.parentmenu.menupad[0],\
-						 self.parentmenu.menupad[2])))
-		self.i_username = Input(username,\
-				pos=Vec2(self.parentmenu.menupad[0]+60,\
-						 self.parentmenu.menupad[2]))
+		# Draw controls for this form
+		self.add(Lable('Username:',
+				pos=Vec2(self.prnt.menupad[0],
+				 		self.prnt.menupad[2])))
+		self.i_username = Input(username,
+				pos=Vec2(self.prnt.menupad[0]+60,
+						 self.prnt.menupad[2]))
 		self.add(self.i_username)
-		self.add(Lable('Password:',pos=Vec2(self.parentmenu.menupad[0]+200,self.parentmenu.menupad[2])))
-		self.i_password = Input(password, pos=Vec2(self.parentmenu.menupad[0]+260,self.parentmenu.menupad[2]))
+		self.add(Lable('Password:',
+				pos=Vec2(self.prnt.menupad[0]+200,
+						 self.prnt.menupad[2])))
+		self.i_password = Input(password,
+				pos=Vec2(self.prnt.menupad[0]+260,
+						 self.prnt.menupad[2]))
 		self.add(self.i_password)
-		self.add(Lable('Server:',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+25)))
-		self.i_server = Input(server, pos=Vec2(self.parentmenu.menupad[0]+60,self.parentmenu.menupad[2]+25), size=Vec2(130,20))
+		self.add(Lable('Server:',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menupad[2]+25)))
+		self.i_server = Input(server,
+				pos=Vec2(self.prnt.menupad[0]+60,
+						 self.prnt.menupad[2]+25),
+				size=Vec2(130,20))
 		self.add(self.i_server)
-		self.add(Lable('Port:',pos=Vec2(self.parentmenu.menupad[0]+200,self.parentmenu.menupad[2]+25)))
-		self.i_port = Input(port, pos=Vec2(self.parentmenu.menupad[0]+260,self.parentmenu.menupad[2]+25), size=Vec2(130,20))
+		self.add(Lable('Port:',
+				pos=Vec2(self.prnt.menupad[0]+200,
+						 self.prnt.menupad[2]+25)))
+		self.i_port = Input(port,
+				pos=Vec2(self.prnt.menupad[0]+260,
+						 self.prnt.menupad[2]+25),
+				size=Vec2(130,20))
 		self.add(self.i_port)
-		self.add(Button('Create Game',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+50), onClick=self.createGame))
-		self.add(Button('Connect',pos=Vec2(self.parentmenu.menusize[0]-90,self.parentmenu.menupad[2]+50), onClick=self.connect))
-		self.add(Lable('Games:',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+70)))
-		self.l_games = SelectList([], pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menupad[2]+90), size=Vec2(200,200))
+		self.add(Button('Create Game',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menupad[2]+50),
+				onClick=self.createGame))
+		self.add(Button('Connect',
+				pos=Vec2(self.prnt.menusize[0]-90,
+						 self.prnt.menupad[2]+50),
+				onClick=self.connect))
+		self.add(Lable('Games:',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menupad[2]+70)))
+		self.l_games = SelectList(games,
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menupad[2]+90),
+				size=Vec2(200,200))
 		self.add(self.l_games)
-		
-		self.add(Button('Main Menu',pos=Vec2(self.parentmenu.menupad[0],self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.parentmenu.showMain))
-		self.add(Button('Join',pos=Vec2(self.parentmenu.menusize[0]-self.parentmenu.menupad[1]-50,self.parentmenu.menusize[1]-self.parentmenu.menupad[3]-20), onClick=self.joinGame))
+		self.add(Button('Main Menu',
+				pos=Vec2(self.prnt.menupad[0],
+						 self.prnt.menusize[1]-self.prnt.menupad[3]-20),
+				onClick=self.prnt.showMain))
+		self.add(Button('Join',
+				pos=Vec2(self.prnt.menusize[0]-self.prnt.menupad[1]-50,
+						 self.prnt.menusize[1]-self.prnt.menupad[3]-20),
+				onClick=self.joinGame))
 	
 	def updateGameList(self):
 		''' Request game list from the server and update the local list upon
 			response.'''
 		print("updating game list now")
 		def response(games):
-			self.parentmenu.gameList = games
+			self.prnt.gameList = games
 			self.l_games.clear()
 			for g in games:
-				self.l_games.addOption(g['String'])
-		self.parentmenu.clientconnection.getGameList(response)
+				self.l_games.addOption(g.description)
+		gcli.clientconnection.getGameList(response)
 		
 	def createGame(self, button, key, mouse):
+		''' Create a dialog to gather info on the game to create.'''
 		print('create game')
 		createGameDialog = None
-		
-		def createResponse(resp):
-			print('Game created, updating list')
-			if (resp):
-				createGameDialog.l_status.setText('Game created.')
-				# Make ok button exit dialog
-				createGameDialog.setOkFunc(onCancel)
-				self.updateGameList()
-			else:
-				print('Game was not created')
 				
 		def onOk(button, key, mouse):
+			''' Assemle the game data and send it to the server.'''
 			print('Ok')
-			name = createGameDialog.i_name.getText()
-			map  = createGameDialog.d_map.getOption()
-			maxplayers = createGameDialog.i_maxplayers.getText()
-			self.parentmenu.clientconnection.newGame(name, map, maxplayers, createResponse)
+			gameName    = createGameDialog.i_name.getText()
+			mapName     = createGameDialog.d_map.getOption()
+			mapFileName = Map.getMapFileName(mapName)
+			maxPlayers  = createGameDialog.i_maxplayers.getText()
+			gcli.clientconnection.newGame(gameName, mapName, mapFileName, maxPlayers, createResponse)
 			
 		def onCancel(button, key, mouse):
 			print('Cancel')
 			createGameDialog.toggle()
 			gui.remove(createGameDialog)
+			
+		def createResponse(resp):
+			''' Handle response from create game request.'''
+			print('Game created, updating list')
+			if (resp):
+				createGameDialog.l_status.setText('Game created, id %d'%resp)
+				# Make ok button exit dialog
+				createGameDialog.setOkFunc(onCancel)
+				self.updateGameList()
+			else:
+				createGameDialog.l_status.setText('Could not create game')
+				# Make ok button exit dialog
+				createGameDialog.setOkFunc(onCancel)
 		
-		if self.parentmenu.clientconnection.isConnected():
-			createGameDialog = CreateGameDialog(self.parentmenu, okFunc=onOk, cancelFunc=onCancel)
+		if gcli.clientconnection.isConnected():
+			createGameDialog = CreateGameDialog(self.prnt, okFunc=onOk, cancelFunc=onCancel)
 			gui.add(createGameDialog)
 		else:
 			createGameDialog = Alert('Oops!', text='Can not create game, we are not connected', pos=Vec2(250,20))
@@ -277,26 +353,29 @@ class MultiForm(Form):
 		connected     = False
 		authenticated = False
 		
-		
 		def connectionResponse(resp):
 			if resp:
 				connectDialog.setText('Connected to the server, authenticating...')
-				self.parentmenu.clientconnection.authenticate(username, password, authResponse)
+				gcli.clientconnection.authenticate(username, password, authResponse)
 			else:
 				connectDialog.setText('Connection failed.')
 				
 		def authResponse(resp):
-			if resp:
+			if (resp == 0):
+				connectDialog.setText('Authentication failed.')
+			elif (resp == 1):
+				connectDialog.setText('You are already connected.')
+			elif (resp == 2):
+				connectDialog.setText('Incorrect password.')
+			elif (resp == 3):
 				connectDialog.setText('Authenticated. You are connected.')
 				self.updateGameList()
-			else:
-				connectDialog.setText('Authentication failed.')
 				
-		def cancel():
-			print('cancel')
-			self.parentmenu.clientconnection.disconnect()
-			gui.remove(connectDialog)
-			del(connectDialog)
+		#def cancel():
+		#	print('cancel')
+		#	gcli.clientconnection.disconnect()
+		#	gui.remove(connectDialog)
+		#	del(connectDialog)
 			
 		print('connecting...')
 		
@@ -308,108 +387,118 @@ class MultiForm(Form):
 		
 		# If everything is ok attempt to connect and use connectDialog to show the status
 		if (server!='' and username!='' and password!='' and port!=''):
-			self.parentmenu.clientconnection.setAddress(server)
+			gcli.clientconnection.setAddress(server)
 			connectDialog = Dialog('Connecting', text='connecting to server %s'%server, pos=Vec2(250,20))
 			gui.add(connectDialog)
-			self.parentmenu.clientconnection.connect(server, int(port), 3000, connectionResponse)
+			gcli.clientconnection.connect(server, int(port), 3000, connectionResponse)
 		else:
 			print('You did not fill in the all the values')
 			
 	def joinGame(self, button=None, key=None, mouse=None):
 		
 		def joinResponse(resp):
-			if resp < 2:
-				print("Couldn't join game")
+			if (resp == 0):
+				gui.add(Alert('Oops!', text='No such game', pos=Vec2(250,20)))
+			if (resp == 1):
+				gui.add(Alert('Oops!', text='Game full', pos=Vec2(250,20)))
 			else:
-				self.parentmenu.startGame(game)
+				self.prnt.startGame(gcli.game)
+				
+		def downloadResponse(resp):
+			if resp:
+				gcli.reloadMaps()
+				gcli.clientconnection.joinGame(g.id, joinResponse)
 				
 		# Get the selected game
 		if len(self.l_games.selected) > 0:
 			selectedGame = self.l_games.selected[0]
 		else:
-			print("No game selected") # Make this an Alert
+			gui.add(Alert('Oops!', text='No game selected', pos=Vec2(250,20)))
 			return
 		
 		# Find the selected game in the gameList and try to join it
-		for g in self.parentmenu.gameList:
-			if g['String'] == selectedGame:
+		for g in self.prnt.gameList:
+			if g.description == selectedGame:
+				# Set game data
+				gcli.game = g
 				# Check if we have the map for the game
-				print("mapList = %s"%str(self.parentmenu.mapList))
-				print("Map = %s"%g['Map'])
-				if g['Map'] not in self.parentmenu.mapList:
-					print('We dont have the map %s, trying to download it'%g['Map'])
-					# TODO - Finish this!
-					return
-				game = g
-				self.parentmenu.clientconnection.joinGame(g['Id'], joinResponse)
+				if g.mapFileName not in gcli.availableMaps.keys():
+					print('We dont have the map %s, trying to download it'%g.mapFileName)
+					gcli.clientconnection.downloadMap(g.mapFileName, downloadResponse)
+				else:
+					gcli.clientconnection.joinGame(g.id, joinResponse)
 		
 class CreateGameDialog(Dialog):
 	''' Create server dialog.'''
-	def __init__(self, parentmenu, okFunc=None, cancelFunc=None):
+	def __init__(self, prnt, okFunc=None, cancelFunc=None):
 		Dialog.__init__(self, title='Create Game', text='', pos=Vec2(250,20), size=Vec2(270,200), okFunc=okFunc, cancelFunc=cancelFunc)
 		
-		self.parentmenu = parentmenu
+		self.prnt = prnt
 		
-		self.l_status = Lable('', pos=Vec2(10,80))
+		# Draw controls
+		self.l_status = Lable('', pos=Vec2(10,100))
 		self.add(self.l_status)
 		self.add(Lable('Max Players:',pos=Vec2(10,60)))
-		self.i_maxplayers = Input('3', pos=Vec2(90,60), size=Vec2(20,20))
+		self.i_maxplayers = Input('3',
+				pos=Vec2(90,60),
+				size=Vec2(20,20))
 		self.add(self.i_maxplayers)
 		self.add(Lable('Map',pos=Vec2(10,40)))
-		self.d_map = DropDown(self.parentmenu.mapList, self.parentmenu.mapList[0], pos=Vec2(90,40), size=Vec2(100,20))
+		self.d_map = DropDown(gcli.availableMaps.values(),
+				gcli.availableMaps.values()[0],
+				pos=Vec2(90,40),
+				size=Vec2(100,20))
 		self.add(self.d_map)
 		self.add(Lable('Game Name:',pos=Vec2(10,20)))
 		self.i_name = Input('New Game', pos=Vec2(90,20))
 		self.add(self.i_name)
 		
-		
-		
-		
-class DisplayForm(Form):
-	''' Display settings menu.'''
-	def __init__(self,  menu):
-		Form.__init__(self,'Settings',pos=Vec2(250,200),size=Vec2(300,350))
-		self.menu = menu
+class OptionForm(Form):
+	''' Options menu.'''
+	def __init__(self,  prnt):
+		Form.__init__(self,'Settings',pos=prnt.menupos, size=prnt.menusize)
+		self.prnt = prnt
 		
 		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
-			
-		self.fullscreen = Check('Fullscreen',pos=Vec2(10,50))
-		if GameSettings().getSetting('FULLSCREEN') == 'True':
-			self.fullscreen.onClick(None, None, None)
-		self.add(self.fullscreen);
 		
-		self.fpsmeter = Check('FPS Meter',pos=Vec2(10,75))
-		if GameSettings().getSetting('SHOWFPS') == 'True':
-			self.fpsmeter.onClick(None, None, None)
-		self.add(self.fpsmeter);
+		# Draw controls	
+		self.c_fullscreen = Check('Fullscreen',pos=Vec2(10,50))
+		if gcli.gst.fullscreen == 'True':
+			self.c_fullscreen.onClick(None, None, None)
+		self.add(self.c_fullscreen);
 		
-		self.aaInput = Input(GameSettings().getSetting('ANTIALIAS'),pos=Vec2(10,100),size=Vec2(20,20))
-		self.add(self.aaInput);
+		self.c_fpsmeter = Check('FPS Meter',pos=Vec2(10,75))
+		if gcli.gst.showFPS == 'True':
+			self.c_fpsmeter.onClick(None, None, None)
+		self.add(self.c_fpsmeter);
+		
+		self.i_antiAlias = Input(gcli.gst.antiAlias,pos=Vec2(10,100),size=Vec2(20,20))
+		self.add(self.i_antiAlias);
 		self.add(Lable('AA (1,2,4,8,16)',pos=Vec2(40,100)))
 		
-		self.alphaInput = Input(GameSettings().getSetting('ALPHABITS'),pos=Vec2(10,125),size=Vec2(20,20))
-		self.add(self.alphaInput);
+		self.i_alphaBits = Input(gcli.gst.alphaBits,pos=Vec2(10,125),size=Vec2(20,20))
+		self.add(self.i_alphaBits);
 		self.add(Lable('Alphabits (4,8,16,32)',pos=Vec2(40,125)))
 		
-		self.colorInput = Input(GameSettings().getSetting('COLORDEPTH'),pos=Vec2(10,150),size=Vec2(20,20))
-		self.add(self.colorInput);
+		self.i_colorDepth = Input(gcli.gst.colorDepth,pos=Vec2(10,150),size=Vec2(20,20))
+		self.add(self.i_colorDepth);
 		self.add(Lable('Colordepth (4,8,16,32)',pos=Vec2(40,150)))
 		
-		self.bloom = Check('Bloom',pos=Vec2(10,175))
-		if GameSettings().getSetting('USEBLOOM') == 'True':
-			self.bloom.onClick(None, None, None)
-		self.add(self.bloom);
+		self.c_bloom = Check('Bloom',pos=Vec2(10,175))
+		if gcli.gst.useBloom == 'True':
+			self.c_bloom.onClick(None, None, None)
+		self.add(self.c_bloom);
 		
-		self.fog = Check('Fog',pos=Vec2(10,200))
-		if GameSettings().getSetting('USEFOG') == 'True':
-			self.fog.onClick(None, None, None)
-		self.add(self.fog);
+		self.c_fog = Check('Fog',pos=Vec2(10,200))
+		if gcli.gst.useFog == 'True':
+			self.c_fog.onClick(None, None, None)
+		self.add(self.c_fog);
 		
 		self.add(Button('OK',pos=Vec2(40,280), onClick=self.ok))
-		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.menu.showMainFromDisplay))
+		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.prnt.showMain))
 		
 		# This needs to be done last so the dropdowns show over other widgets
 		self.add(Lable('Resolution:',pos=Vec2(10,25)))
@@ -427,56 +516,61 @@ class DisplayForm(Form):
 			'854x480 (16:9)', 
 			'1280x720 (16:9)', 
 			'1920x1080 (16:9)']
-		self.resolution = DropDown(options, GameSettings().getSetting('RESOLUTION'), pos=Vec2(75,25), size=Vec2(100,20))
-		self.add(self.resolution)
+		self.d_resolution = DropDown(options, gcli.gst.resolution, pos=Vec2(75,25), size=Vec2(100,20))
+		self.add(self.d_resolution)
 		
 	def ok(self,button,key,mouse):
 		# save settings
-		GameSettings().setSetting('RESOLUTION',  self.resolution.getOption())
-		if self.fullscreen.value:
-			GameSettings().setSetting('FULLSCREEN',  'True')
+		gcli.gst.resolution=  self.d_resolution.getOption()
+		if self.c_fullscreen.value:
+			gcli.gst.fullscreen =  'True'
 		else:
-			GameSettings().setSetting('FULLSCREEN',  'False')
-		if self.fpsmeter.value:
-			GameSettings().setSetting('SHOWFPS',  'True')
+			gcli.gst.fullscreen = 'False'
+		if self.c_fpsmeter.value:
+			gcli.gst.showFPS = 'True'
 		else:
-			GameSettings().setSetting('SHOWFPS',  'False')
-		GameSettings().setSetting('ANTIALIAS',  self.aaInput.getText())
-		GameSettings().setSetting('ALPHABITS',  self.alphaInput.getText())
-		GameSettings().setSetting('COLORDEPTH',  self.colorInput.getText())
-		if self.bloom.value:
-			GameSettings().setSetting('USEBLOOM',  'True')
+			gcli.gst.showFPS = 'False'
+		gcli.gst.antiAlias  = self.i_antiAlias.getText()
+		gcli.gst.alphaBits  = self.i_alphaBits.getText()
+		gcli.gst.colorDepth = self.i_colorDepth.getText()
+		if self.c_bloom.value:
+			gcli.gst.useBloom = 'True'
 		else:
-			GameSettings().setSetting('USEBLOOM',  'False')
-		if self.fog.value:
-			GameSettings().setSetting('USEFOG',  'True')
+			gcli.gst.useBloom = 'False'
+		if self.c_fog.value:
+			gcli.gst.useFog   = 'True'
 		else:
-			GameSettings().setSetting('USEFOG',  'False')
-		GameSettings().saveSettings()
-		self.menu.showMainFromDisplay()
+			gcli.gst.useFog   = 'False'
+		gcli.gst.saveSettings()
+		self.prnt.showMain(button,key,mouse)
 		
-class AudioForm(Form):
-	def __init__(self, menu):
-		Form.__init__(self,'AudioSettings',pos=Vec2(250,200),size=Vec2(300,300))
-		self.menu = menu
+class PlayerForm(Form):
+	def __init__(self, prnt):
+		Form.__init__(self,'Player Setup',pos=prnt.menupos, size=prnt.menusize)
+		self.prnt = prnt
+		
+		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
 		
+		# Draw controls
 		self.add(Lable('Nothing here yet. Click OK or Cancel to go',pos=Vec2(60,50)))
 		self.add(Lable('back to the main menu',pos=Vec2(60,70)))
-		self.add(Button('OK',pos=Vec2(40,280), onClick=self.menu.showMainFromLoad))
-		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.menu.showMainFromLoad))
+		self.add(Button('OK',pos=Vec2(40,280), onClick=self.prnt.showMain))
+		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.prnt.showMain))
 
 class CreditsForm(Form):
-	def __init__(self, menu):
-		Form.__init__(self,'Credits',pos=Vec2(250,200),size=Vec2(300,300))
-		self.menu = menu
+	def __init__(self, prnt):
+		Form.__init__(self,'Credits',pos=prnt.menupos, size=prnt.menusize)
+		self.prnt = prnt
+		
+		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
 		self.sizer.node.hide()
 		self.things[0].onClick=lambda b,k,m : None
 		
 		self.add(Lable('Nothing here yet. Click OK or Cancel to go',pos=Vec2(60,50)))
 		self.add(Lable('back to the main menu',pos=Vec2(60,70)))
-		self.add(Button('OK',pos=Vec2(40,280), onClick=self.menu.showMainFromLoad))
-		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.menu.showMainFromLoad))
+		self.add(Button('OK',pos=Vec2(40,280), onClick=self.prnt.showMain))
+		self.add(Button('Cancel',pos=Vec2(150,280), onClick=self.prnt.showMain))

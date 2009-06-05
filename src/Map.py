@@ -1,19 +1,58 @@
-''' Map.py
+'''_Map.py_____________________________________________________________________
 	Author:			Chad Rempp
 	Date:			2009/05/25
-	Purpose:		Holds the map object.
+	Purpose:		Provides map file access and returns objects from the map
+					files.
 	Usage:			None
 	References:		None
 	Restrictions:	None
-	License:		TBD
+	License:		GPL
 	Notes:			
-	'''
+____________________________________________________________________________'''
+
+# Python imports
+import cPickle
+import hashlib
+import os
 
 # PSG imports
 from Entity import *
 from Player import Player
-from Representation import *
+
+MAP_PATH = 'data/maps/'
+MAP_EXT  = '.map'
+
+def getMapFiles():
+	''' Return a list of the map filenames stored in the MAP_PATH.'''
+	maplist = []
+	for f in os.listdir(MAP_PATH):
+		if (os.path.splitext(f)[1] == MAP_EXT):
+			maplist.append(f)
+	return maplist
+
+def getMapMD5(mapfilename):
+	''' Return the MD5 checksum for the given mapfile.'''
+	file = open(MAP_PATH + mapfilename, 'rb')
+	check = hashlib.md5(file.read()).hexdigest()
+	return check
+
+def getMapFileName(mapname):
+	''' Search through the files for the game with the given name.'''
 	
+	# First try the obvious
+	fileName = mapname.replace(' ','') + MAP_EXT
+	fh = open(MAP_PATH + fileName)
+	map = cPickle.load(fh)
+	if (map.name == mapname):
+		return fileName
+	# Otherwise check all the available files
+	else:
+		for f in getMapfiles():
+			fh = open(MAP_PATH + fileName)
+			map = cPickle.load(fh)
+			if (map.name == mapname):
+				return f
+
 class SerializableMap:
 	''' The map object is used only for serialization of maps. You can load
 		and save maps with this class then use getMap to return the map
@@ -93,39 +132,47 @@ class SerializableMap:
 			 'attacked':attacked}
 		self._ships.append(d)
 	
-	def getMap(self):
-		''' Create relevant objects for each dictionary entry in each
-			dictionary and return lists of the created objects.'''
-		
-		print("planets %s"%str(self._planets))
+	def getPlayers(self):
+		''' Return a list of Player objects.'''
 		
 		playerObjs = []
-		planetObjs = []
-		planetReps = []
-		shipObjs   = []
-		shipReps   = []
 		
-		# Create players
 		for playerDict in self._players:
 			p = Player(name=playerDict['name'],
 					   faction=playerDict['faction'],
 					   type=playerDict['type'],
 					   ai=playerDict['ai'])
 			playerObjs.append(p)
+			
+		return playerObjs
+	
+	def getPlayerDict(self):
+		''' Just return each list the player dictionaries.'''
+		return self._players
+	
+	def getPlanets(self):
+		''' Return a list of EntityPlanet objects.'''
+		
+		planetObjs = []
 		
 		# Create planets
 		for planetDict in self._planets:
 			e = EntityPlanet(pos=planetDict['pos'],
 							 hpr=planetDict['hpr'],
 							 owner=planetDict['owner'])
-			r = RepPlanet(entity=e,
-						  pos=planetDict['pos'],
-						  hpr=planetDict['hpr'],
-						  model=planetDict['rep'])
 			planetObjs.append(e)
-			planetReps.append(r)
 		
-		# Create ships
+		return planetObjs
+	
+	def getPlanetDict(self):
+		''' Just return each list the planet dictionaries.'''
+		return self._planets
+	
+	def getShips(self):
+		''' Return a list of EntityShip objects.'''
+		
+		shipObjs   = []
+		
 		for shipDict in self._ships:
 			e = eval('Entity'+shipDict['type'])\
 							(pos=planetDict['pos'],
@@ -137,16 +184,9 @@ class SerializableMap:
 			if planetDict['sensorRad'] != 0: e.fuel=planetDict['fuel']
 			e.moved=planetDict['moved']
 			e.attacked=planetDict['attacked']
-			r = eval('Rep'+shipDict['type'])\
-							(entity=e,
-							 pos=planetDict['pos'],
-							 hpr=planetDict['hpr'],
-							 model=planetDict['rep'])
 			
-		planets = (planetObjs,planetReps)
-		ships   = (shipObjs,shipReps)
-		return (playerObjs, planets, ships)
+		return shipObjs
 		
-	def getMapDicts(self):
-		''' Just return each list of dictionaries.'''
-		return (self._players, self._planets, self._ships)
+	def getShipDict(self):
+		''' Just return each list the ship dictionaries.'''
+		return self._ships

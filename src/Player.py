@@ -9,6 +9,20 @@
 	Notes:			
 '''
 
+# Python imports
+import os
+
+PLAYER_PATH = 'data/players/'
+PLAYER_EXT  = '.plr'
+
+def getPlayerFiles():
+	''' Return a list of the map filenames stored in the MAP_PATH.'''
+	playerlist = []
+	for f in os.listdir(PLAYER_PATH):
+		if (os.path.splitext(f)[1] == PLAYER_EXT):
+			playerlist.append(f)
+	return playerlist
+
 # Player------------------------------------------------------------------------
 class Player:
 	_name        = None

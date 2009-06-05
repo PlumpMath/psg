@@ -20,31 +20,37 @@ from pandac.PandaModules import WindowProperties
 
 # PSG imports
 #from data.themes.psgtheme import PSGTheme
-from Settings import GameSettings
-import Event
-import Controller
-import GameStateMgr
-import View
-import ViewStateMgr
+from ClientConnection import ClientConnection
+from Game import ClientGame
 from gui.core import GUI
 from gui.keys import Keys
 from gui.psgtheme import PSGTheme
 from gui.mainmenu import MainScreen
-from ClientConnection import ClientConnection
-from Game import ClientGame
-
+from Settings import GameSettings
+import Controller
+import Event
+import GameStateMgr
+import Map
+import Player
+import View
+import ViewStateMgr
 
 class GameClient(DirectObject):
 	'''Initialize the client. Loads settings, shows the main game menu, sets up and runs the game'''
 	def __init__(self):
 		print("Starting PSG Client ...")
+		
+		# Pollute the global namespace
+		import __builtin__
+		__builtin__.gcli = self
+		
 		# Initialize event dispatcher
 		self._dispatcher = Event.Dispatcher()
 		self._dispatcher.register(self, 'E_ExitGame', self.exitGame)
 		self._dispatcher.register(self, 'E_ExitProgram', self.exitProgram)
 		
-		self.maps               = []
-		self.players            = []
+		self.availableMaps      = {}
+		self.availablePlayers   = {}
 		self.clientconnection   = ClientConnection()
 		self.game               = ClientGame()
 		# These will be initialized upon starting the actual game
@@ -54,34 +60,35 @@ class GameClient(DirectObject):
 		self.mousecontroller    = None
 		self.gameFrame          = None
 		
-		# Load files
-		for f in os.listdir('data/maps'):
-			if os.path.splitext(f)[1] == '.map':
-				try:
-					fh = open('data/maps/' + f,'rb')
-					map = cPickle.load(fh)
-					self.maps.append(map)
-					fh.close()
-				except: print('Could not open file %s'%f)
-		for f in os.listdir('data/players'):
-			if os.path.splitext(f)[1] == '.plr':
-				try:
-					fh = open('data/players/' + f,'rb')
-					player = cPickle.load(fh)
-					self.players.append(player)
-					fh.close()
-				except: print('Could not open file %s'%f)
-				
 		#self.temp()
 		
 		# Load settings
-		GameSettings().loadSettings()
+		self.gst = GameSettings()
+		self.gst.loadSettings()
+		self.reloadMaps()
+		self.reloadPlayers()
 		
 		# Create GUI system
 		self.gui = GUI(Keys(),theme=PSGTheme())
 		
 		# Show the main menu which will call start game
-		self.menu = MainScreen(self, self.clientconnection)
+		self.menu = MainScreen()
+		
+	def reloadMaps(self):
+		''' Reload the list of available maps.'''
+		self.availableMaps = {}
+		for mapFile in Map.getMapFiles():
+			fh = open(Map.MAP_PATH + mapFile, 'rb')
+			map = cPickle.load(fh)
+			self.availableMaps[mapFile] = map.name
+			
+	def reloadPlayers(self):
+		''' Reload the list of available players.'''
+		self.availablePlayers = {}
+		for playerFile in Player.getPlayerFiles():
+			fh = open(Player.PLAYER_PATH + playerFile, 'rb')
+			player = cPickle.load(fh)
+			self.availablePlayers[playerFile] = player.name
 		
 	def createGame(self):
 		''' If we are playing a single player game or hosting a multiplayer game
@@ -100,37 +107,32 @@ class GameClient(DirectObject):
 		''' Creates a new game engine based on settings in GameSettings.
 			Information for this came from here
 			http://panda3d.org/phpbb2/viewtopic.php?t=2848'''
-		# Setup values from gamesettings
-		#res = GameSettings().getSetting('RESOLUTION').split()[0].split('x')
-		#self.xRes = int(res[0])
-		#self.yRes = int(res[1])
-		self.xRes = GameSettings().getSetting('X_RES')
-		self.yRes = GameSettings().getSetting('Y_RES')
-		aa    = int(GameSettings().getSetting('ANTIALIAS'))
-		alpha = int(GameSettings().getSetting('ALPHABITS'))
-		color = int(GameSettings().getSetting('COLORDEPTH'))
 		
 		# Create a new FrameBufferProperties object using our settings
 		fbProps = FrameBufferProperties()
 		fbProps.addProperties(FrameBufferProperties.getDefault())
-		fbProps.setMultisamples(aa)
-		fbProps.setAlphaBits(alpha)
-		fbProps.setDepthBits(color)
+		fbProps.setMultisamples(gcli.gst.antiAlias)
+		fbProps.setAlphaBits(gcli.gst.alphaBits)
+		fbProps.setDepthBits(gcli.gst.colorDepth)
 		
 		# Create a WindowProperties object
 		winProps = WindowProperties( base.win.getProperties() )
-		if GameSettings().getSetting('FULLSCREEN') == 'True':
-			winProps.setFullscreen(True)
-			winProps.setUndecorated(True)
-		else:
-			winProps.setFullscreen(False)
-		winProps.setSize(self.xRes,self.yRes)
+		winProps.setFullscreen(gcli.gst.fullscreen)
+		winProps.setUndecorated(gcli.gst.fullscreen)
+		winProps.setSize(gcli.gst.xRes,gcli.gst.yRes)
 		winProps.setTitle('PSG - Project Space Game: Alpha')
-		
-		# Create the engine
-		base.graphicsEngine.makeOutput(base.pipe, 'mainGameOutput', 0, fbProps, winProps,  GraphicsPipe.BFRequireWindow, base.win.getGsg())
-		base.openMainWindow(props=winProps, gsg=base.win.getGsg(), keepCamera=1) 
 
+		# Create the engine
+		base.graphicsEngine.makeOutput(base.pipe,  # GraphicsPipe
+								'mainGameOutput',  # Name
+								0,                 # Sort
+								fbProps,           # FrameBufferProperties
+								winProps,          # WindowProperties
+								GraphicsPipe.BFRequireWindow, # Flags
+								base.win.getGsg()) # GraphicsStateGaurdian
+		base.openMainWindow(props=winProps, gsg=base.win.getGsg(), keepCamera=1) 
+		
+		# Set camera properties
 		base.camLens.setFov(60.0)
 			
 	def startGame(self, game):
@@ -140,11 +142,9 @@ class GameClient(DirectObject):
 		
 		# Some of this will be moved to createGame / loadGame
 		self.makeGameEngine()
-		if GameSettings().getSetting('SHOWFPS') == "True":
-			base.setFrameRateMeter(True)
+		base.setFrameRateMeter(gcli.gst.showFPS)
 		
-		print('  In GameClient - map = %s'%game['Map'])
-		clientgame = ClientGame(id=game['Id'], name=game['Name'], maxplayers=game['MaxPlayers'], map=game['Map'], starttime=game['StartTime'], turnnumber=game['TurnNumber'])
+		#print('  In GameClient - map = %s'%game.mapFileName)
 		
 		self.viewstate = ViewStateMgr.ViewStateManager()
 		self.viewstate.addView(View.GameView())
@@ -152,7 +152,7 @@ class GameClient(DirectObject):
 		self.gamestate = GameStateMgr.GameStateManager()
 		self.keyboardcontroller = Controller.KeyboardController()
 		self.mousecontroller = Controller.MouseController()
-		self.gamestate.newGame(clientgame)
+		self.gamestate.newGame(game)
 		#self.gameFrame = GameWindow()
 		
 	def exitGame(self, event):

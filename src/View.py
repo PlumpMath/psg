@@ -12,9 +12,9 @@ class GameView():
 	def __init__(self):
 		print("Creating GameView")
 		base.disableMouse()
-		res = GameSettings().getSetting('RESOLUTION').split()[0].split('x')
-		self.xRes = int(res[0])
-		self.yRes = int(res[1])
+		#res = GameSettings().getSetting('RESOLUTION').split()[0].split('x')
+		#self.xRes = int(res[0])
+		#self.yRes = int(res[1])
 		
 		self.sky = SkyBox.SkyBox(render)
 		self.camera = CameraMgr.CameraManager()

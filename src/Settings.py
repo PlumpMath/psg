@@ -21,43 +21,28 @@ class GameSettings:
 	''' This class provides storage for the game settings.
 		This could be integrated into the Panda config file for'''
 		
-	__metaclass__=Singleton
+	#__metaclass__=Singleton
 	
 	def __init__(self, cfgfile=None):
 		''' Setup initial values.'''
+		self.resolution = '800x600'
+		self.fullscreen = False
+		self.showFPS    = True
+		self.alphaBits  = 16
+		self.antiAlias  = 16
+		self.colorDepth = 16
+		self.useBloom   = True
+		self.useFog     = True
 		
 		if cfgfile == None: self._cfgFilePath = 'data/config.cfg'
-		else: self._cfgFilePath = self.cfgfile
-		self._defaultDict = {
-				'RESOLUTION': '800x600 ', 
-				'FULLSCREEN': 'False',
-				'SHOWFPS': 'True',
-				'ALPHABITS': '16',
-				'ANTIALIAS': '32',
-				'COLORDEPTH': '16',
-				'USEBLOOM': 'True', 
-				'USEFOG': 'True'}
-		self._configDict = None
-		
-	def getSetting(self, key):
-		'''	Retrieve the value for the given key. If the key doesn't exist
-			return None.'''
-			
-		if self._configDict.has_key(key):
-			return self._configDict[key]
-		else:
-			return None
-		
-	def setSetting(self, key, value):
-		self._configDict[key] = value
+		else: self._cfgFilePath = cfgfile
 		
 	def loadSettings(self):
 		''' Load the configuration file and parse it filling in the _configDict.
 			Modified from http://www.daniweb.com/forums/thread30215.html'''
 			
-		# Open File and read text
+		# If there is no config file save the defaults to a file.
 		if not(os.path.exists(self._cfgFilePath) or os.path.isfile(self._cfgFilePath)):
-			self._configDict = self._defaultDict
 			self.saveSettings()
 		try: cfgFile = open(self._cfgFilePath, 'r')
 		except Exception, e: raise
@@ -69,20 +54,43 @@ class GameSettings:
 		pattern = re.compile("\\n([\w_]+)[\t ]*([\w: \\\/~.-]+)")
 		tuples = re.findall(pattern, cfgText)
 		self._configDict = dict()
-		for x in tuples: self._configDict[x[0]] = x[1]
-		
+		for x in tuples:
+			if   x[0] == 'RESOLUTION':
+				self.resolution = x[1]
+			elif x[0] == 'FULLSCREEN':
+				if x[1] == 'True':
+					self.fullscreen = True
+				else:
+					self.fullscreen = False
+			elif x[0] == 'SHOWFPS':
+				if x[1] == 'True':
+					self.showFPS = True
+				else:
+					self.showFPS = False
+			elif x[0] == 'ALPHABITS':
+				self.alphaBits = int(x[1])
+			elif x[0] == 'ANTIALIAS':
+				self.antiAlias = int(x[1])
+			elif x[0] == 'COLORDEPTH':
+				self.colorDepth = int(x[1])
+			elif x[0] == 'USEBLOOM':
+				if x[1] == 'True':
+					self.useBloom = True
+				else:
+					self.useBloom = False
+			elif x[0] == 'USEFOG':
+				if x[1] == 'True':
+					self.useFog = True
+				else:
+					self.useFog = False
+			
 		# Close file
 		try: cfgFile.close()
 		except Exception, e: raise
-		
-		# Check dict keys and fill in blanks with defaults
-		if (self._configDict.keys() != self._defaultDict.keys()):
-			for key in filter(lambda x: x not in self._configDict.keys(),self._defaultDict.keys()):
-				self._configDict[key] = self._defaultDict[key]
 				
 		# Create some derivative values
-		self._configDict['X_RES'] = int(self._configDict['RESOLUTION'].split()[0].split('x')[0])
-		self._configDict['Y_RES'] = int(self._configDict['RESOLUTION'].split()[0].split('x')[1])
+		self.xRes = int(self.resolution.split()[0].split('x')[0])
+		self.yRes = int(self.resolution.split()[0].split('x')[1])
 		
 	def saveSettings(self):
 		''' Save the current configuration state to the config file.'''
@@ -96,9 +104,16 @@ class GameSettings:
 		except Exception, e: raise
 		
 		# Write Settings
-		for key in self._configDict.keys():
-			try: cfgFile.write(key + "\t\t" + self._configDict[key] + "\n")
-			except Exception, e: raise
+		try:
+			cfgFile.write("RESOLUTION\t\t" + self.resolution + "\n")
+			cfgFile.write("FULSCREEN\t\t"  + self.fullscreen + "\n")
+			cfgFile.write("SHOWFPS\t\t"    + self.showFPS + "\n")
+			cfgFile.write("ALPHABITS\t\t"  + self.alphaBits + "\n")
+			cfgFile.write("ANTIALIAS\t\t"  + self.antiAlias + "\n")
+			cfgFile.write("COLORDEPTH\t\t" + self.colorDepth + "\n")
+			cfgFile.write("USEBLOOM\t\t"   + self.useBloom + "\n")
+			cfgFile.write("USEFOG\t\t"     + self.useFog + "\n")
+		except Exception, e: raise
 		
 		# Close file
 		try: cfgFile.close()

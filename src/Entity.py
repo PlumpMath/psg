@@ -52,8 +52,9 @@ class Entity:
 	owner = None
 	tag  = ""
 	representation = None
+	modelFile = ''
 	
-	def __init__(self,  pos=None,  hpr=None,  type="",  owner=None,  tag=""):
+	def __init__(self,  pos=None,  hpr=None,  type="",  owner=None,  tag="", model=''):
 		if pos != None:
 			self.pos = pos
 		if hpr != None:
@@ -64,6 +65,7 @@ class Entity:
 			self.owner = owner
 		if tag != "":
 			self.tag = tag
+		self.modelFile = model
 			
 	def setOwner(self, owner):
 		self.owner = owner

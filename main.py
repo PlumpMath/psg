@@ -23,9 +23,9 @@ if __name__ == '__main__':
 	# Add the code directory to path and import what we need
 	sys.path.append('./src')
 	import GameClient
-	#import GameServer
 	
-	#serverInstance = GameServer.GameServer()
-	clientInstance = GameClient.GameClient()
+	# Create the game instance
+	gcli = GameClient.GameClient()
+	
 	#PStatClient.connect()
 	run()
