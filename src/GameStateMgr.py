@@ -122,6 +122,7 @@ class GameStateManager:
 	def newGame(self, game):
 		''' Create game objects from the game object.
 			game (ClientGame).'''
+		print("NEWGAME-->")
 		self.gameId     = game.id
 		self.gameName   = game.name
 		self.turnNumber = game.turnNumber
@@ -129,7 +130,7 @@ class GameStateManager:
 		self.startTime  = game.startTime
 		self.mapName    = game.mapName
 		
-		print(self.map)
+		print(self.mapFileName)
 		
 		# Load map
 		fh = open(Map.MAP_PATH+self.mapFileName,'rb')
@@ -137,7 +138,9 @@ class GameStateManager:
 		players = serializedMap.getPlayers()
 		planets = serializedMap.getPlanets()
 		ships   = serializedMap.getShips()
-		print('SM - %s'%str(serializedMap._planets))
+		#print('SM - %s'%str(serializedMap._planets))
+		print("num planets = %d"%len(planets))
+		print("num ships = %d"%len(ships))
 		
 		print(planets)
 		# Players
@@ -182,6 +185,9 @@ class GameStateManager:
 		
 	def loadGame(self, gameToLoad):
 		print("loadGame not implemented yet")
+		
+	def startGame(self):
+		pass
 
 class TurnMgr:
 	_usedEntities = []

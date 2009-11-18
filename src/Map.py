@@ -53,6 +53,16 @@ def getMapFileName(mapname):
 			if (map.name == mapname):
 				return f
 
+class Map:
+	name = 'Default Map'
+	file = ''
+	mapSize = (150,150,80)
+	startingPlanets = 1
+	players = []
+	planets = []
+	ships = []
+	
+	
 class SerializableMap:
 	''' The map object is used only for serialization of maps. You can load
 		and save maps with this class then use getMap to return the map
@@ -170,7 +180,7 @@ class SerializableMap:
 	
 	def getShips(self):
 		''' Return a list of EntityShip objects.'''
-		
+		print("SM has %d ships"%len(self._ships))
 		shipObjs   = []
 		
 		for shipDict in self._ships:
@@ -190,3 +200,51 @@ class SerializableMap:
 	def getShipDict(self):
 		''' Just return each list the ship dictionaries.'''
 		return self._ships
+
+def saveMapSerialized(map, fileName):
+	pass
+
+def openMapSerialized(fileName):
+	pass
+
+def saveMapText(map, fileName):
+	print("Saving Map")
+	fh = open(MAP_PATH+fileName, 'wb')
+	fh.write("<BEGIN MAP>")
+	fh.write("name=%s"%serialMap.name)
+	fh.write("mapsizex=%d"%mapSize[0])
+	fh.write("mapsizey=%d"%mapSize[1])
+	fh.write("mapsizez=%d"%mapSize[2])
+	fh.write("startingplanets=%d"%startingPlanets)
+	for player in map.getPlayers:
+		fh.write("<BEGIN PLAYER>")
+		fh.write("player.name=%s"%player.name)
+		fh.write("player.file=%s"%player.name)
+		fh.write("<END PLAYER>")
+	for planet in map.getPlanets:
+		fh.write("<BEGIN PLANET>")
+		fh.write("planet.owner=%s"%planet.owner)
+		fh.write("planet.posx=%d"%planet.pos[0])
+		fh.write("planet.posy=%d"%planet.pos[1])
+		fh.write("planet.posz=%d"%planet.pos[2])
+		fh.write("planet.hprx=%d"%planet.pos[0])
+		fh.write("planet.hpry=%d"%planet.pos[1])
+		fh.write("planet.hprz=%d"%planet.pos[2])
+		fh.write("planet.model=%s"%planet.representation.model)
+		fh.write("<END PLANET>")
+	for ship in map.getShips:
+		fh.write("<BEGIN SHIP>")
+		fh.write("ship.owner=%s"%ship.owner)
+		fh.write("ship.posx=%d"%ship.pos[0])
+		fh.write("ship.posy=%d"%ship.pos[1])
+		fh.write("ship.posz=%d"%ship.pos[2])
+		fh.write("ship.hprx=%d"%ship.pos[0])
+		fh.write("ship.hpry=%d"%ship.pos[1])
+		fh.write("ship.hprz=%d"%ship.pos[2])
+		fh.write("ship.model=%s"%ship.representation.model)
+		fh.write("<END SHIP>")
+	fh.write("<END MAP>")
+	fh.close()
+	
+def openMapText(fileName):
+	pass

@@ -59,6 +59,17 @@ class ClientGame:
 		else:
 			self.mapCheck = ''
 		self.description  = '%s %s %s %s %s'%(self.name,self.maxPlayers,self.mapName,self.startTime,self.turnNumber)
+		
+	def __repr__(self):
+		r = "<ClientGame: id=%d, name=%s, maxPlayers=%d,\n"%(self.id, self.name, self.maxPlayers)
+		r+= "             startTime=%s, turnNumber=%d\n"%(self.startTime, self.turnNumber)
+		r+= "             mapName=%s,\n"%self.mapName
+		r+= "             mapFileName=%s\n"%self.mapFileName
+		r+= "  Players:\n"
+		for p in self.players:
+			r+= "             %s\n"%p.name
+		r+= ">"
+		return r
 
 #_SERVERGAME_CLASS_____________________________________________________________
 class ServerGame:

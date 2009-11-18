@@ -20,6 +20,7 @@ from gui.widgets import *
 from Settings import GameSettings
 import Event
 import Map
+import Player
 
 # Set current screen resolution
 x_res = base.win.getProperties().getXSize()
@@ -39,6 +40,8 @@ class MainScreen:
 	def __init__(self):
 		''' Create the menu forms and draw the background image. The main
 			menu also handles changing the current active form.'''
+		
+		print ("MAINSCREEN")
 		
 		self.menupos    = Vec2((x_res-self.menusize[0])/2,(y_res-self.menusize[1])/2+40)
 		self.gameList   = []
@@ -110,8 +113,8 @@ class MainScreen:
 		print('exit')
 		Event.Dispatcher().broadcast(Event.Event('E_ExitProgram',src=self))
 		
-	def startGame(self, game):
-		print('Start game:')
+	def startGame(self):
+	#	print('Start game:')
 		self.background.destroy()
 		self.main.hide()
 		self.single.hide()
@@ -119,7 +122,7 @@ class MainScreen:
 		del(self.main)
 		del(self.single)
 		del(self.multi)
-		gcli.startGame(game)
+		gcli.startGame()
 
 class MainForm(Form):
 	''' The main game menu'''
@@ -167,8 +170,12 @@ class MainForm(Form):
 class SingleForm(Form):
 	''' Single player game menu.'''
 	def __init__(self, prnt):
-		Form.__init__(self,'Main Menu',pos=prnt.menupos, size=prnt.menusize)
+		Form.__init__(self,'Singleplayer Game',pos=prnt.menupos, size=prnt.menusize)
 		self.prnt = prnt
+		self.numPlayerRange = range(1,5)
+		self.numPlayerRange.reverse()
+		#self.playerDropDowns = []
+		#self.d_map = None
 		
 		# Dont show close or sizer button and disable drag.
 		self.x.node.hide()
@@ -184,7 +191,7 @@ class SingleForm(Form):
 			defaultPlayer = gcli.availablePlayers.values()[0]
 		else:
 			defaultPlayer = ''
-		
+			
 		# Draw widgets from bottom to top (this is for dropdown menu sort order)
 		self.add(Button('Main Menu',
 				pos=Vec2(self.prnt.menupad[0],
@@ -193,33 +200,59 @@ class SingleForm(Form):
 		self.add(Button('Start Game',
 				pos=Vec2(self.prnt.menusize[0]-self.prnt.menupad[1]-50,
 						 self.prnt.menusize[1]-self.prnt.menupad[3]-20),
-				onClick=self.prnt.startGame))
+				onClick=self.startGame))
 		
 		# TODO - make the following dependent on the number of players in the
 		# current map. This will likely require a scrolled section
-		r = range(1,5)
-		r.reverse()
-		for i in r:
+		self.playerDropDowns = list()
+		for i in self.numPlayerRange:
 			self.add(Lable('Player ' + str(i),
 					pos=Vec2(self.prnt.menupad[0],
 							 self.prnt.menupad[2]+30+(30*i))))
-			self.add(DropDown(gcli.availablePlayers.values(),
+			p = DropDown(gcli.availablePlayers.values(),
 					defaultPlayer,
 					pos=Vec2(self.prnt.menupad[0]+60,
-							 self.prnt.menupad[2]+30+(30*i))))
-			self.add(DropDown(['Human','Computer'],
+							 self.prnt.menupad[2]+30+(30*i)))
+			t = DropDown(['Human','Computer'],
 					'Computer',
 					pos=Vec2(self.prnt.menupad[0]+220,
-							 self.prnt.menupad[2]+30+(30*i))))
-		
+							 self.prnt.menupad[2]+30+(30*i)))
+			self.playerDropDowns.append((p,t))
+			self.add(p)
+			self.add(t)
+			
+		print("playerDropDowns size=%s"%len(self.playerDropDowns))
 		self.add(Lable('Map',
 				pos=Vec2(self.prnt.menupad[0],
 						 self.prnt.menupad[2])))
-		self.add(DropDown(gcli.availableMaps.values(),
+		self.d_map = DropDown(gcli.availableMaps.values(),
 				defaultMap,
 				pos=Vec2(self.prnt.menupad[0]+50,
 						 self.prnt.menupad[2]),
-				size=Vec2(280,20)))
+				size=Vec2(280,20))
+		self.add(self.d_map)
+		
+	def startGame(self, button=None, key=None, mouse=None):
+		''' Put together the game and tell gameclient to start it.'''
+		gcli.curr_game.id         = 0
+		gcli.curr_game.name       = "Test Game"
+		for d in self.playerDropDowns:
+			pass
+			# Create player
+			name = d[0].getOption()
+			print(name)
+			p = Player.getPlayer(name=name)
+			gcli.curr_game.players.append(p)
+		gcli.curr_game.maxPlayers = 5
+		gcli.curr_game.mapName    = self.d_map.getOption()
+		gcli.curr_game.mapFileName= Map.getMapFileName(gcli.curr_game.mapName)
+		#gcli.curr_game.startTime  = starttime
+		gcli.curr_game.turnNumber = 0
+		
+		self.prnt.startGame()
+		
+	def newSelectedMap(self):
+		pass
 
 class MultiForm(Form):
 	''' Multi player game menu.'''

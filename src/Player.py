@@ -10,6 +10,7 @@
 '''
 
 # Python imports
+import cPickle
 import os
 
 PLAYER_PATH = 'data/players/'
@@ -23,12 +24,42 @@ def getPlayerFiles():
 			playerlist.append(f)
 	return playerlist
 
+def getPlayerFileName(playername):
+	''' Search through the files for the player with the given name.'''
+	# First try the obvious
+	fileName = playername.replace(' ','') + PLAYER_EXT
+	fh = open(PLAYER_PATH + fileName)
+	player = cPickle.load(fh)
+	if (player.name == playername):
+		return fileName
+	# Otherwise check all the available files
+	else:
+		for f in getPlayerfiles():
+			fh = open(PLAYER_PATH + fileName)
+			player = cPickle.load(fh)
+			if (player.name == playername):
+				return f
+			
+def getPlayer(file = "", name = ""):
+	if (file is not ""):
+		fh = open(PLAYER_PATH + file)
+		player = cPickle.load(fh)
+		return player
+	elif (name is not ""):
+		file = getPlayerFileName(name)
+		fh = open(PLAYER_PATH + file)
+		player = cPickle.load(fh)
+		return player
+	else:
+		return None
+
 # Player------------------------------------------------------------------------
 class Player:
-	_name        = None
-	_faction     = 'Gorgons'
-	_type        = 'ComputerAI'
-	_AI          = None
+	name        = None
+	faction     = 'Gorgons'
+	type        = 'ComputerAI'
+	AI          = None
+	file        = ''
 	_gamesPlayed = 0
 	_gamesWon    = 0
 	_gamesLost   = 0
@@ -52,6 +83,7 @@ class Player:
 			self._entities.remove(entity)
 		except:
 			pass
+		
 
 # SerializablePlayer------------------------------------------------------------
 class SerializablePlayer:

@@ -93,8 +93,8 @@ class ClientConnection:
 			taskMgr.add(self.__readTask,"Poll the connection reader",-40)
 			taskMgr.doMethodLater(PING_DELAY, self.__pingTask, 'serverPingTask', sort=-41)
 			self._connected = 1
-		except Exception as e:
-			print("Couldn't connect to server: %s"%e)
+		except Exception:
+			print("Couldn't connect to server")
 			self._connected = 0
 		callback(self._connected)
 		

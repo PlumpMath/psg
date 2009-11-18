@@ -49,10 +49,10 @@ class GameClient(DirectObject):
 		self._dispatcher.register(self, 'E_ExitGame', self.exitGame)
 		self._dispatcher.register(self, 'E_ExitProgram', self.exitProgram)
 		
-		self.availableMaps      = {}
-		self.availablePlayers   = {}
+		self.availableMaps      = {} # {filename: mapname}
+		self.availablePlayers   = {} # {filename: playername}
 		self.clientconnection   = ClientConnection()
-		self.game               = ClientGame()
+		self.curr_game          = ClientGame()
 		# These will be initialized upon starting the actual game
 		self.viewstate          = None
 		self.gamestatemgr       = None
@@ -60,7 +60,7 @@ class GameClient(DirectObject):
 		self.mousecontroller    = None
 		self.gameFrame          = None
 		
-		#self.temp()
+		self.temp2()
 		
 		# Load settings
 		self.gst = GameSettings()
@@ -90,18 +90,18 @@ class GameClient(DirectObject):
 			player = cPickle.load(fh)
 			self.availablePlayers[playerFile] = player.name
 		
-	def createGame(self):
-		''' If we are playing a single player game or hosting a multiplayer game
-			we must first create the game.'''
-		if (self._gameType == 'Multiplayer'):
-			# Create the game and submit it to the server
-			print('Creating a multiplayer game')
-		elif (self._gameType == 'Singleplayer'):
-			print('Creating a singleplayer game')
+	#def createGame(self):
+	#	''' If we are playing a single player game or hosting a multiplayer game
+	#		we must first create the game.'''
+	#	if (self._gameType == 'Multiplayer'):
+	#		# Create the game and submit it to the server
+	#		print('Creating a multiplayer game')
+	#	elif (self._gameType == 'Singleplayer'):
+	#		print('Creating a singleplayer game')
 			
-	def loadGame(self, file):
-		'''Load a saved game from a file'''
-		pass
+	#def loadGame(self, file):
+	#	'''Load a saved game from a file'''
+	#	pass
 		
 	def makeGameEngine(self):
 		''' Creates a new game engine based on settings in GameSettings.
@@ -135,10 +135,12 @@ class GameClient(DirectObject):
 		# Set camera properties
 		base.camLens.setFov(60.0)
 			
-	def startGame(self, game):
+	def startGame(self):
 		# Kill current screen
 		del(self.menu)
 		del(self.gui)
+		
+		print self.curr_game
 		
 		# Some of this will be moved to createGame / loadGame
 		self.makeGameEngine()
@@ -152,8 +154,10 @@ class GameClient(DirectObject):
 		self.gamestate = GameStateMgr.GameStateManager()
 		self.keyboardcontroller = Controller.KeyboardController()
 		self.mousecontroller = Controller.MouseController()
-		self.gamestate.newGame(game)
+		self.gamestate.newGame(self.curr_game)
+		#self.gamestate.loadGame(self.curr_game)
 		#self.gameFrame = GameWindow()
+		self.gamestate.startGame()
 		
 	def exitGame(self, event):
 		''' Clean up open/running game. Show mainmenu.'''
@@ -207,3 +211,48 @@ class GameClient(DirectObject):
 		fh = open('data/maps/' + m.name.replace(' ', ''),'wb')
 		cPickle.dump(m, fh)
 		fh.close()
+		
+	def temp2(self):
+		''' This is a temporary function to create some initial players and maps.
+			Delete me later!'''
+		import Map
+		import Player
+		import Entity
+		import Representation
+		
+		p1 = Player.Player(name="Chad the Destroyer", faction='Terrans', type='Human',
+				ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		p2 = Player.Player(name="Gorath", faction='Protath', type='ComputerAI',
+				ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		p3 = Player.Player(name="Chilrog", faction='Protath', type='ComputerAI',
+				ai='None', gamesplayed=20, gameswon=10, gameslost=10)
+		planet1 = Entity.EntityPlanet(pos=(100,100,10),  hpr=(0,0,0),  owner=p1,  tag="tag_01")
+		planet1.representation = Representation.RepPlanet(entity=planet1, pos=(100,100,10),  hpr=(0,0,0),  tag="tag_01", model="planet_01")
+		planet2 = Entity.EntityPlanet(pos=(-100,-50,-30),  hpr=(0,0,0),  owner=p2,  tag="tag_02")
+		planet2.representation = Representation.RepPlanet(entity=planet2, pos=(-100,-50,-30),  hpr=(0,0,0),  tag="tag_02", model="planet_01")
+		planet3 = Entity.EntityPlanet(pos=(50,-100,0),  hpr=(0,0,0),  owner=p3,  tag="tag_03")
+		planet3.representation = Representation.RepPlanet(entity=planet3, pos=(50,-100,0),  hpr=(0,0,0),  tag="tag_03", model="planet_01")
+		ship1 = Entity.EntityShip(pos=(110,110,10),  hpr=(0,0,0),  type="",  owner=p1,  tag="")
+		ship1.representation = Representation.RepLightCapture(entity=ship1, pos=(110,110,10),  hpr=(0,0,0),  tag="", model='ship_03')
+		ship2 = Entity.EntityShip(pos=(-110,-50,-30),  hpr=(0,0,0),  type="",  owner=p2,  tag="")
+		ship2.representation = Representation.RepLightCapture(entity=ship2, pos=(-110,-50,-30),  hpr=(0,0,0),  tag="", model='ship_03')
+		ship3 = Entity.EntityShip(pos=(50,-110,0),  hpr=(0,0,0),  type="",  owner=p3,  tag="")
+		ship3.representation = Representation.RepLightCapture(entity=ship3, pos=(50,-110,0),  hpr=(0,0,0),  tag="", model='ship_03')
+		
+		m = Map()
+		m.name = 'The Battle of Gorath'
+		m.file = 'testmap.map'
+		m.mapSize = (150,150,40)
+		m.startingPlanets = 1
+		m.players.append(p1)
+		m.players.append(p2)
+		m.players.append(p3)
+		m.planets.append(planet1)
+		m.planets.append(planet2)
+		m.planets.append(planet3)
+		m.ships.append(ship1)
+		m.ships.append(ship2)
+		m.ships.append(ship3)
+		
+		Map.saveMapText(m, m.file)
+		
