@@ -1,0 +1,24 @@
+//Cg
+ 
+void vshader(
+    uniform float4x4 mat_modelproj,
+    in float4 vtx_position : POSITION,
+    in float2 vtx_texcoord0: TEXCOORD0,
+    out float2 l_my : TEXCOORD0,
+    out float4 l_position : POSITION)
+{
+    l_position = mul(mat_modelproj, vtx_position);
+    l_my = vtx_texcoord0;
+}
+ 
+void fshader(
+    uniform sampler2D tex_0 : TEXUNIT0,
+    uniform sampler2D tex_1 : TEXUNIT1,
+    in float2 l_my : TEXCOORD0,
+    out float4 o_color : COLOR)
+{
+    float4 space  = tex2D(tex_0, l_my);
+    float4 clouds = tex2D(tex_1, l_my);
+    
+    o_color = space + clouds;
+}

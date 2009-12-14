@@ -1,6 +1,6 @@
 from datetime import datetime
 import weakref
-from Util import Singleton
+from Util.Singleton import Singleton
 
 # Event-------------------------------------------------------------------------
 class Event(object):
