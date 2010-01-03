@@ -2,14 +2,16 @@
 	
 	The sky box object
 	
-	
-	
 	Author:			Chad Rempp
 	Date:			2009/12/12
 	License:		GNU LGPL v3 
 	Todo:			Serialize skybox, lights, camera
 '''
 
+# Python imports
+#import os
+
+# Panda imports
 from direct.task import Task 
 from pandac.PandaModules import DepthWriteAttrib
 from pandac.PandaModules import Fog
@@ -17,9 +19,8 @@ from pandac.PandaModules import Shader
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec4
-import os
 
-class SkyBox:
+class SkyBox(object):
 	'''
 	
 	'''

@@ -23,37 +23,6 @@ import os
 from GameConsts import *
 from Util.Serializable import Serializable
 
-def getMapFiles():
-	''' Return a list of the map filenames stored in the MAP_PATH.'''
-	maplist = []
-	for f in os.listdir(MAP_PATH):
-		if (os.path.splitext(f)[1] == MAP_EXT):
-			maplist.append(f)
-	return maplist
-
-def getMapMD5(mapfilename):
-	''' Return the MD5 checksum for the given mapfile.'''
-	file = open(MAP_PATH + mapfilename, 'rb')
-	check = hashlib.md5(file.read()).hexdigest()
-	return check
-
-def getMapFileName(mapname):
-	''' Search through the files for the game with the given name.'''
-	
-	# First try the obvious
-	fileName = mapname.replace(' ','') + MAP_EXT
-	fh = open(MAP_PATH + fileName)
-	map = cPickle.load(fh)
-	if (map.name == mapname):
-		return fileName
-	# Otherwise check all the available files
-	else:
-		for f in getMapfiles():
-			fh = open(MAP_PATH + fileName)
-			map = cPickle.load(fh)
-			if (map.name == mapname):
-				return f
-
 class Map(Serializable):
 	''' Hold the map data including all players and objects within the map
 	
@@ -65,84 +34,107 @@ class Map(Serializable):
 	in this object.
 	'''
 
-	_VERSION    = '0.0'
+	_VERSION    = '0.1'
 	name        = 'Default Map'
 	id          = 0
 	playerCount = 0
 	mapSize     = (150,150,80)
 
-	def __init__(self):
-		self.playerList  = []
-		self.entityList  = []
-		self._skybox     = None
-		self._lights     = None
-		self._camera     = None
-
+	def __init__(self, filename=''):
+		if filename is not '':
+			self.read(filename)
+		else:
+			self.playerList  = []
+			self.entityList  = []
+			self._skybox     = None
+			self._lights     = None
+			self._camera     = None
 
 class MapStore(object):
-	''' Collection of available maps
-	
-	'''
-	availableMaps = list()
+	''' Holds and manipulates a collection of available maps.
+		
+		The mapstore loads each map in its map directory, puts key values in a
+		dictionary and then closes the map. This is to prevent massive memory
+		usage. When a map is needed at a later time it will be reloaded.'''
 	
 	def __init__(self):
-		pass
+		LOG.notice("Creating MapStore")
+		self.availableMaps = list()
+		self.rescan()
 	
 	def rescan(self):
-		''' Rescan map directory for maps. If a map with the filename already
-		exists in availableMaps nothing is done. Otherwise the filename is
-		stored. Not that the map is not loaded at this point.
+		''' Rescan map directory for maps.
+			
+			Start fresh and load map data.
 		'''
+		self.availableMaps = list()
 		for f in os.listdir(MAP_PATH):
 			if (os.path.splitext(f)[1] == MAP_EXT):
-				if not(self.isAvailable(f)):
-					availableMaps.append({'filename':f, 'id':'', 'obj':None, 'md5':self.getMapMD5(f)})
+					map = self.loadMap(filename=f)
+					self.availableMaps.append({'id':self.getMapMD5(f), 'filename':f, 'name':map.name, 'obj':None})
 	
-	def isAvailable(self, filename='', id=''):
-		''' Is the map with filename or id available in the availableMaps
-		list?'''
-		if self.getMapDict(filename=filename, id=id) != None:
-			return True
-		else:
-			return False
-	
-	def isLoaded(self, filename='', id=''):
-		''' Is the map with filename or id in the availableMaps list loaded?'''
-		if self.getMapDict(filename=filename, id=id)['obj'] != None:
-			return True
-		else:
-			return False
-		
-	def getMapDict(self, filename='', id=''):
+	def getMapDict(self, filename='', id='', name=''):
 		''' Return the map dictionary with the filename or id.'''
-		for m in self._availableMaps:
+		for m in self.availableMaps:
 			if (filename is not '' and m['filename'] == filename):
+				return m
+			if (name is not '' and m['name'] == name):
 				return m
 			if (id != '' and m['id'] == id):
 				return m
 		return None
-			
-	def getMap(self, filename='', id=''):
-		''' Return the map instance with the filename or id. If the map is not
-		loaded None is returned.'''
-		return self.getMapDict(filename=filename, id=id)['obj']
-		
-	def loadMap(self, filename='', id=''):
-		''' If the map with filename or id is available it is loaded and the
-		map object is returned. If the map is not available None is returned.'''
-		mapDict = self.getMapDict(filename, id)
-		if mapDict is not None:
-			if filename is not '' and mapDict[filename] is not filename:
-				mapDict['filename'] = filename
-			m = Map()
-			m.read(mapDict['filename'])
-			mapDict['obj'] = m
-			return m
+	
+	def isAvailable(self, filename='', id='', name=''):
+		''' Is the map with filename or id available in the availableMaps
+		list?'''
+		if self.getMapDict(filename=filename, id=id, name=name) is not None:
+			return True
 		else:
-			return None
+			return False
+	
+	def isLoaded(self, filename='', id='', name=''):
+		''' Is the map with filename or id in the availableMaps list loaded?'''
+		map = self.getMapDict(filename=filename, id=id)
+		if map is not None and map['obj'] is not None:
+			return True
+		else:
+			return False
+		
+	def loadMap(self, filename):
+		'''Loads the map object and returns it.
+		   If the map is not available None is returned.'''
+		mDict = self.getMapDict(filename=filename)
+		if mDict is not None:
+			if mDict['obj'] is not None:
+				return mDict['obj']
+			else:
+				mDict['obj'] = Map("%s%s"%(MAP_PATH,filename))
+				return mDict['obj']
+		else:
+			m = Map("%s%s"%(MAP_PATH,filename))
+			self.availableMaps.append({'id':self.getMapMD5(filename), 'filename':filename, 'name':m.name, 'obj':m})
+			return m
 
-	def getMapMD5(filename):
+	def getMapMD5(self, filename):
 		''' Return the MD5 checksum for the given mapfile.'''
 		file = open(MAP_PATH + filename, 'rb')
 		check = hashlib.md5(file.read()).hexdigest()
 		return check
+	
+	def getAvailableFiles(self):
+		''' Return a list of filenames for available maps.
+			
+			This is needed by the GUI code.'''
+		return [map['filename'] for map in self.availableMaps]
+		
+	def getAvailableNames(self):
+		''' Return a list of names for available maps.
+		
+			This is needed by the GUI code.'''
+		return [map['name'] for map in self.availableMaps]
+	
+	def __str__(self):
+		rpr = '<MapStore: %d maps available>\n'
+		for map in self.availableMaps:
+			rpr += '    <Map: id=%s name=%s file=%s>'%(map['id'],map['name'],map['filename'])
+		return rpr

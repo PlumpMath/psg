@@ -1,1 +1,1 @@
-C:\Panda3D-1.6.2\python\python.exe src/GameServer.py
+C:\Panda3D-1.6.2\python\python.exe server.py

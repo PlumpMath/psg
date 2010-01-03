@@ -1,11 +1,27 @@
-from pandac.PandaModules import Vec3
-from Util.Singleton import Singleton
-import Event
+''' Entity.py
+	
+	The game Entity objects.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3 
+	Todo:			
+'''
+
+# Python imports
 import math
 
-# EntityManager-----------------------------------------------------------------
-class EntityManager():
-	__metaclass__=Singleton
+# Panda imports
+from pandac.PandaModules import Vec3
+
+# PSG imports
+from Util.Singleton import Singleton
+import Event
+
+
+class EntityManager(Singleton):
+	'''
+	'''
 	_entities = []
 	def __init__(self):
 			pass
@@ -43,9 +59,8 @@ class EntityManager():
 				entityList.append(e)
 		return entityList
 
-# Entity------------------------------------------------------------------------
-class Entity:
-	"""An abstract class that represents any logical entity in the game."""
+class Entity(object):
+	'''An abstract class that represents any logical entity in the game.'''
 	pos = Vec3()
 	hpr = Vec3()
 	type = ""
@@ -82,9 +97,8 @@ class Entity:
 	def __repr__(self):
 		return "<Entity: " + self.tag + ", pos=" + str(self.pos) + ">"
 		
-# ShipEntity--------------------------------------------------------------------
 class EntityShip(Entity):
-	"""Represents ship logic"""
+	'''Represents ship logic'''
 	type = "SHIP"
 	moveRad   = 0
 	attackRad = 0
@@ -130,9 +144,8 @@ class EntityHeavyCapture(EntityShip):
 	def __init__(self,  pos=None,  hpr=None,  type="",  owner=None,  tag=""):
 		EntityShip.__init__(self, pos, hpr, type, owner, tag)
 	
-# PlanetEntity------------------------------------------------------------------
 class EntityPlanet(Entity):
-	"""Represents ship logic"""
+	'''Represents planet logic'''
 	type = "Planet"
 	
 	def __init__(self,  pos=None,  hpr=None,  type="",  owner=None,  tag=""):

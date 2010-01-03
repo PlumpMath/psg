@@ -1,3 +1,14 @@
+''' Grid.py
+	
+	Games space grid. This is no longer used.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3
+	Todo:			
+'''
+
+# Panda imports
 from pandac.PandaModules import CollisionHandlerQueue
 from pandac.PandaModules import CollisionNode
 from pandac.PandaModules import CollisionRay
@@ -13,13 +24,14 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 
+# PSG imports
 import Event
 from GameConsts import *
 from Util import frange
 
 # Creates the grid overlay for the Universe.
 # Grid implementation adapted from http://www.panda3d.org/phpbb2/viewtopic.php?t=3034
-class Grid:
+class Grid(object):
 	'''The grid object draws a bunch of lines and flattens them into a single
 	   object.'''
 	def __init__(self, parent, boardRad, gridInt):

@@ -1,4 +1,17 @@
+''' GeomObjects.py
+	
+	A collection of geometry objects.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3
+	Todo:			
+'''
+# Python imports
 from __future__ import division
+import math
+
+# Panda imports
 from pandac.PandaModules import AntialiasAttrib
 from pandac.PandaModules import BillboardEffect
 from pandac.PandaModules import DepthTestAttrib
@@ -16,12 +29,13 @@ from pandac.PandaModules import Vec4
 from pandac.PandaModules import GeomNode
 from pandac.PandaModules import Plane
 from pandac.PandaModules import Point3
-import math
-from Settings import GameSettings
-import Event
-import Entity
 
-class CircleBB:
+# PSG imports
+import Event
+from Settings import GameSettings
+from GSEng import Entity
+
+class CircleBB(object):
 	_EDGES = 40
 	_np = NodePath()
 	def __init__(self, parent, pos=Vec3(0, 0, 0), size=1, color=Vec4(0, 0, 0, 1)):
@@ -80,7 +94,7 @@ class CircleBB:
 	def __del__(self):
 		self.removeNode()
 
-class SelectionIndicator:
+class SelectionIndicator(object):
 	_np = NodePath()
 	_currHpr = Vec3(0, 0, 0)
 	_color=Vec4(0.3, 0.3, 0.8, 1)
@@ -113,7 +127,7 @@ class SelectionIndicator:
 		self.removeNode()
 	
 	
-class MoveCursor:
+class MoveCursor(object):
 	_EDGES = 40
 	_zPos             = 0
 	_movingUp         = False
@@ -300,7 +314,7 @@ class MoveCursor:
 		# TODO - This isn't calling self.removeNode() correctly
 		self._np.removeNode()
 
-class AttackCursor:
+class AttackCursor(object):
 	_EDGES = 40
 	_color = Vec4(0.8, 0.3, 0.3, 1)
 	

@@ -1,2 +1,2 @@
 #!/bin/bash
-python src/GameServer.py
+python server.py

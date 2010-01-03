@@ -1,30 +1,31 @@
 ''' Settings.py
+	
+	The GameSettings class loads and saves global game settings. It also provides
+	an interface for accessing settings.
+	
 	Author:			Chad Rempp
 	Date:			2009/05/07
-	Purpose:		The GameSettings class loads and saves global game
-					settings. It also provides an interface for accessing
-					settings.
-	Usage:			None
-	References:		None
-	Restrictions:	None
-	License:		TBD
-	Notes:			The GameSettings object is a singleton.
+	License:		GNU LGPL v3
+	Todo:			The GameSettings object is a singleton.
 '''
 
 # Python imports
 import re, sys, os.path
 
 # PSG imports
-from Util import Singleton
+from Util.Singleton import Singleton
 
-class GameSettings:
+class GameSettings(object):
 	''' This class provides storage for the game settings.
 		This could be integrated into the Panda config file for'''
-		
-	#__metaclass__=Singleton
+	
+	__metaclass__ = Singleton
 	
 	def __init__(self, cfgfile=None):
 		''' Setup initial values.'''
+		
+		LOG.notice("Creating game settings")
+		
 		self.resolution = '800x600'
 		self.fullscreen = False
 		self.showFPS    = True
@@ -40,7 +41,9 @@ class GameSettings:
 	def loadSettings(self):
 		''' Load the configuration file and parse it filling in the _configDict.
 			Modified from http://www.daniweb.com/forums/thread30215.html'''
-			
+		
+		LOG.notice("Loading game settings")
+		
 		# If there is no config file save the defaults to a file.
 		if not(os.path.exists(self._cfgFilePath) or os.path.isfile(self._cfgFilePath)):
 			self.saveSettings()
@@ -95,13 +98,17 @@ class GameSettings:
 	def saveSettings(self):
 		''' Save the current configuration state to the config file.'''
 		
+		LOG.notice("Saving game settings")
+		
 		# Open file
 		try: cfgFile = open(self._cfgFilePath, 'w')
-		except Exception, e: raise
+		except Exception, e:
+			LOG.error("Could not open config file", e)
 		
 		# Write title
 		try: cfgFile.write("# Game Settings File\n")
-		except Exception, e: raise
+		except Exception, e:
+			LOG.error("Could not write to config file", e)
 		
 		# Write Settings
 		try:
@@ -113,8 +120,10 @@ class GameSettings:
 			cfgFile.write("COLORDEPTH\t\t" + self.colorDepth + "\n")
 			cfgFile.write("USEBLOOM\t\t"   + self.useBloom + "\n")
 			cfgFile.write("USEFOG\t\t"     + self.useFog + "\n")
-		except Exception, e: raise
+		except Exception, e:
+			LOG.error("Could not save settings to config file", e)
 		
 		# Close file
 		try: cfgFile.close()
-		except Exception, e: raise
+		except Exception, e:
+			LOG.error("Could not close config file", e)

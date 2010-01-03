@@ -1,3 +1,14 @@
+''' Representation.py
+	
+	Graphical representations of the entity objects.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3
+	Todo:			
+'''
+
+# Panda imports
 from direct.interval.IntervalGlobal import *
 from pandac.PandaModules import AntialiasAttrib
 from pandac.PandaModules import NodePath
@@ -5,14 +16,15 @@ from pandac.PandaModules import Point3
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
-from Settings import GameSettings
-#import Gui.GameMenu as GameGui
-import Entity
-import Event
-import View
-import GeomObjects
 
-class RepresentationManager:
+# PSG imports
+import Event
+from Settings import GameSettings
+from GSEng import Entity
+from GXEng import View
+from GXEng import GeomObjects
+
+class RepresentationManager(object):
 	_representations = []
 	def __init__(self):
 		#Event.Dispatcher().register(self, 'E_EntitySelect', self.handleSelection)
@@ -57,8 +69,8 @@ class RepresentationManager:
 					return r
 		return None
 
-class Representation:
-	"""An abstract class that represents any logical entity in the game."""
+class Representation(object):
+	'''An abstract class that represents any logical entity in the game.'''
 	pos = Vec3(0, 0, 0)
 	hpr = Vec3(0, 0, 0)
 	model = None

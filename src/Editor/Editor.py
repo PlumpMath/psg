@@ -1,3 +1,13 @@
+''' Editor.py
+	
+	The game map editor. Or at least it will be.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3 
+	Todo:			Finish
+'''
+
 import os, sys, time, wx
 from pandac.PandaModules import WindowProperties, loadPrcFileData
 loadPrcFileData("", "window-type none")

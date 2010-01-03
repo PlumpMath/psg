@@ -19,7 +19,7 @@ from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.DirectObject import DirectObject
 import sys
 
-HELPTEXT = """
+HELPTEXT = '''
 1: Load Steam
 2: Load Dust
 3: Load Fountain
@@ -27,7 +27,7 @@ HELPTEXT = """
 5: Load Smokering
 6: Load Fireish
 ESC: Quit
-"""
+'''
 
 class World(DirectObject):
 	def __init__(self):

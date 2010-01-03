@@ -1,14 +1,27 @@
+''' View.py
+	
+	Game views are the different views of the game.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3
+	Todo:			
+'''
+
+# Panda imports
 from direct.showbase.DirectObject import DirectObject
 from pandac.PandaModules import AmbientLight
 from pandac.PandaModules import DirectionalLight
 from pandac.PandaModules import Vec4
-from Settings import GameSettings
-import SkyBox
-import CameraMgr
-import Event
 
-class GameView():
-	"""The main view class for graphics"""
+# PSG imports
+import Event
+from Settings import GameSettings
+from GXEng import SkyBox
+from GXEng import CameraMgr
+
+class GameView(object):
+	'''The main view class for graphics'''
 	def __init__(self):
 		print("Creating GameView")
 		base.disableMouse()

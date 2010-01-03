@@ -45,6 +45,7 @@ class Serializable(object):
 		in __setstate__ so we don't need the object returned from load.'''
 		fh = open(file, 'r')
 		pickle.load(fh)
+		fh.close()
 		
 	def __getstate__(self):
 		''' Add __dict__ to our state and then cycle through the specified dat

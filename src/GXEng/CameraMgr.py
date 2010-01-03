@@ -1,12 +1,28 @@
+''' CameraMgr.py
+	
+	Conrols camera movement.
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3
+	Todo:			
+'''
+
+# Python imports
+import math
+
+# Panda imports
 from direct.showbase.DirectObject import DirectObject
 from pandac.PandaModules import Vec3
-import math
-import Event
 
-# CameraManager-----------------------------------------------------------------
+# PSG imports
+from GSEng import Event
+
 class CameraManager(DirectObject):
-	"""A class that controls the camera"""
+	'''A class that controls the camera'''
 	def __init__(self):
+		LOG.notice("Starting CameraManager")
+		# Register with Dispatcher
 		Event.Dispatcher().register(self, 'E_Mouse_3', self.startDrag)
 		Event.Dispatcher().register(self, 'E_Mouse_3_Up', self.stopDrag)
 		Event.Dispatcher().register(self, 'E_MouseWheel_Up', self.adjustCamDist)
@@ -19,6 +35,10 @@ class CameraManager(DirectObject):
 		Event.Dispatcher().register(self, 'E_Key_CameraLeft-up', self.keyMove)
 		Event.Dispatcher().register(self, 'E_Key_CameraRight', self.keyMove)
 		Event.Dispatcher().register(self, 'E_Key_CameraRight-up', self.keyMove)
+		
+		# Set camera properties
+		base.camLens.setFov(60.0)
+		
 		self.movingUp = False
 		self.movingDown = False
 		self.movingLeft = False

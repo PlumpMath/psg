@@ -1,31 +1,40 @@
-from pandac.PandaModules import loadPrcFileData
-#from pandac.PandaModules import loadPrcFile 
-#loadPrcFile("data/Config.prc")
-#loadPrcFileData("", "want-directtools #t")
-#loadPrcFileData("", "want-tk #t")
-#loadPrcFileData('', 'sync-video 0')
-#loadPrcFileData('', 'want-pstats 1')
-loadPrcFileData('', 'win-size 640 480')
-loadPrcFileData('', 'win-origin 520 285')
-loadPrcFileData('', 'window-title PSG')
-loadPrcFileData('', 'undecorated 1')
-loadPrcFileData("", "model-path ./data/models")
-loadPrcFileData("", "model-path ./data/themes")
-loadPrcFileData("", "texture-path ./data/textures")
-loadPrcFileData("", "sound-path ./data/sfx")
-#loadPrcFileData("", "particle-path ./data/gfx")
-
 import direct.directbase.DirectStart
-from pandac.PandaModules import PStatClient
+from pandac.PandaModules import loadPrcFileData
+from pandac.PandaModules import loadPrcFile 
+loadPrcFile("data/p3d.config")
+
+# Python imports
 import sys
+import getopt
 
 if __name__ == '__main__':
+	# Parse arguments
+	try:
+		opts, args = getopt.getopt(sys.argv[1:], "hd:", ["help", "debug="])
+	except getopt.GetoptError, err:
+		# print help information and exit:
+		print str(err) # will print something like "option -a not recognized"
+		print("Figure it out!")
+		sys.exit(2)
+	
+	import __builtin__
+	__builtin__.DEBUG = 0
+	__builtin__.NOGRAPHICS = True
+	for o, a in opts:
+		if o in ("-d", "--debug"):
+			__builtin__.DEBUG = a
+		elif o in ("-h", "--help"):
+			print("Figure it out!")
+			sys.exit()
+		else:
+			assert False, "unhandled option"
+	
 	# Add the code directory to path and import what we need
 	sys.path.append('./src')
-	import GameClient
-	
 	# Create the game instance
+	# Panda imports
+	from pandac.PandaModules import PStatClient
+	import GameClient
 	gcli = GameClient.GameClient()
-	
 	#PStatClient.connect()
 	run()

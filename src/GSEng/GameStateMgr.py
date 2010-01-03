@@ -1,48 +1,40 @@
 ''' GameStateMgr.py
+	
+	
+	
 	Author:			Chad Rempp
 	Date:			2009/05/27
-	Purpose:		
-	Usage:			None
-	References:		None
-	Restrictions:	None
-	License:		TBD
-	Notes:			
+	License:		GNU LGPL v3
+	Todo:			
 '''
 
 # Python imports
 import sys, random, cPickle
 
 # Panda imports
-from pandac.PandaModules import CollisionHandlerQueue
-from pandac.PandaModules import CollisionNode
-from pandac.PandaModules import CollisionRay
-from pandac.PandaModules import CollisionTraverser
-from pandac.PandaModules import GeomNode
-from pandac.PandaModules import Plane
-from pandac.PandaModules import Point3
-from pandac.PandaModules import Vec3
+#from pandac.PandaModules import CollisionHandlerQueue
+#from pandac.PandaModules import CollisionNode
+#from pandac.PandaModules import CollisionRay
+#from pandac.PandaModules import CollisionTraverser
+#from pandac.PandaModules import GeomNode
+#from pandac.PandaModules import Plane
+#from pandac.PandaModules import Point3
+#from pandac.PandaModules import Vec3
 
 # PSG imports
 import Controller
-import GeomObjects
 import Event
-import Entity
-import Player
-import Map
-from Util import Singleton
-from Game import ClientGame
+#from GXEng import GeomObjects
+from GSEng import Entity
+from GSEng import Player
+#from GSEng.Map import Map
+from GSEng.Game import Game
+from Util.Singleton import Singleton
 
-# GameState---------------------------------------------------------------------
-class GameStateManager:
-	"""A class that keeps track of the game state."""
-	__metaclass__=Singleton
+class GameStateManager(Game):
+	'''A class that keeps track of the game state.'''
 	
-	gameId     = 0
-	gameName   = ''
-	players    = []
-	turnNumber = 0
-	map        = None
-	startTime  = 0
+	__metaclass__ = Singleton
 	
 	# States
 	s_WaitingForSelection = True
@@ -51,7 +43,8 @@ class GameStateManager:
 	selected = None
 	currentPlayer = None
 	
-	def __init__(self,  gameToLoad=None):
+	def __init__(self):
+		super(GameStatemanager, self).__init__()
 		self.entitymanager = Entity.EntityManager()
 		Event.Dispatcher().register(self, 'E_Key_Move', self.onMoveKey)
 		Event.Dispatcher().register(self, 'E_Key_Exit', self.onExitKey)
@@ -119,22 +112,11 @@ class GameStateManager:
 				# Enter waitingforselection state
 				self.s_WaitingForSelection = True
 			
-	def newGame(self, game):
-		''' Create game objects from the game object.
-			game (ClientGame).'''
-		print("NEWGAME-->")
-		self.gameId     = game.id
-		self.gameName   = game.name
-		self.turnNumber = game.turnNumber
-		self.mapFileName= game.mapFileName
-		self.startTime  = game.startTime
-		self.mapName    = game.mapName
-		
-		print(self.mapFileName)
+	def startGame(self):
+		''' Create game objects and start game.'''
 		
 		# Load map
-		fh = open(Map.MAP_PATH+self.mapFileName,'rb')
-		serializedMap = cPickle.load(fh)
+		self.loadMap()
 		players = serializedMap.getPlayers()
 		planets = serializedMap.getPlanets()
 		ships   = serializedMap.getShips()
@@ -183,13 +165,8 @@ class GameStateManager:
 		self.currentPlayer = self.players[0]
 		'''
 		
-	def loadGame(self, gameToLoad):
-		print("loadGame not implemented yet")
-		
-	def startGame(self):
-		pass
-
-class TurnMgr:
+	
+class TurnMgr(object):
 	_usedEntities = []
 	def __init__(self):
 		print("TurnMgr")

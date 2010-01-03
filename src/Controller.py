@@ -1,15 +1,26 @@
-# TODO - Add support for keymap options
+''' Controller.py
+	
+	Map keyboard / mouse controls to game objects
+
+	Author:			Chad Rempp
+	Date:			2009/05/07
+	License:		GNU LGPL v3 
+	Todo:			Add support for keymap options
+'''
+
+# Panda imports
 from direct.showbase.DirectObject import DirectObject
 from pandac.PandaModules import CollisionHandlerQueue
 from pandac.PandaModules import CollisionNode
 from pandac.PandaModules import CollisionRay
 from pandac.PandaModules import CollisionTraverser
 from pandac.PandaModules import GeomNode
+
+# PSG imports
 import Event
 
-# KeyboardController------------------------------------------------------------
 class KeyboardController(DirectObject):
-	"""This class registers keyboard events with Panda3D and broadcasts events"""
+	'''This class registers keyboard events with Panda3D and broadcasts events'''
 	def __init__(self):
 		
 		# Register events
@@ -28,9 +39,8 @@ class KeyboardController(DirectObject):
 		self.accept("page_up-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZUp-up', self)])
 		self.accept("page_down-up", Event.Dispatcher().broadcast, [Event.Event('E_Key_ZDown-up', self)])
 		
-# MouseController------------------------------------------------------------
 class MouseController(DirectObject):
-	"""This class registers mouse events with Panda3D and broadcasts events"""
+	'''This class registers mouse events with Panda3D and broadcasts events'''
 	def __init__(self):
 		
 		# Register events
@@ -43,7 +53,7 @@ class MouseController(DirectObject):
 		self.accept("wheel_up",   Event.Dispatcher().broadcast, [Event.Event('E_MouseWheel_Up', self)])
 		self.accept("wheel_down", Event.Dispatcher().broadcast, [Event.Event('E_MouseWheel_Down', self)])
 
-class Selector:
+class Selector(object):
 	'''A Selector listens for mouse clicks and then runs select. Select then
 	   broadcasts the selected tag (if there is one)'''
 	def __init__(self):
