@@ -115,8 +115,9 @@ class InterfaceConsole(Interface):
 						user = u.username
 				game = 'NONE'
 				for g in self._server.games:
-					if (u in g.players):
+					if (c in g.connections):
 						game = g.name
+						break
 				self.__printLine("%s|%s|%s"%(addr.ljust(15),user.ljust(15),game.ljust(15)))
 				
 	def __lsUsers(self):
@@ -135,16 +136,20 @@ class InterfaceConsole(Interface):
 					
 	def __lsGames(self):
 		''' Print all active games.'''
-		self.__printLine('\b_ID_|_NAME__________|_MAP___________|_MX_PL_|_TURN_|_RUNTIME_')
+		self.__printLine('\b_ID_|_NAME__________|_MAP___________|_MX_PL_|_CONN_|_TURN_|_RUNTIME_')
 		if (len(self._server.games) == 0):
 			self.__printLine("No games")
 		else:
 			for g in self._server.games:
 				runtime = (int(time.time()) - g.startTime) # Divide by 60 for minutes
-				self.__printLine("%s|%s|%s|%s|%s|%s"%(str(g.id).ljust(4),
-							g.name.ljust(15),g.map.name.ljust(15),
-							str(g.numPlayers).ljust(7),
-							str(g.turnNumber).ljust(6),str(runtime)))
+				self.__printLine("%s|%s|%s|%s|%s|%s|%s"%
+								 (str(g.id).ljust(4),
+								  g.name.ljust(15),
+								  g.map.name.ljust(15),
+								  str(g.numPlayers).ljust(7),
+								  str(len(g.connections)).ljust(6),
+								  str(g.turnNumber).ljust(6),
+								  ("%0.1f"%g.runTime()).ljust(9)))
 				
 	def __kill(self):
 		''' Depending on parameters kill a game, connection or user.'''
@@ -170,7 +175,7 @@ class InterfaceConsole(Interface):
 					for u in self._server.connectedUsers:
 						if (u.username == id):
 							foundUser = True
-							self._server.__handleDisconnect(None, None, u.connectedClient)
+							self._server.disconnect(None, None, u.connectedClient)
 					if not foundUser:
 						self.__printLine('User %s not connected'%id)
 				elif (type=='g'): # Kill game
@@ -178,7 +183,7 @@ class InterfaceConsole(Interface):
 					for g in self._server.games:
 						if (g.id == id):
 							for u in g.players:
-								self._server.__handleDisconnect(None, None, u.connectedClient)
+								self._server.disconnect(None, None, u.connectedClient)
 							self._server.games.remove(g)
 				else:
 					self.__printLine('USAGE: kill -c=address -u=username -g=id')

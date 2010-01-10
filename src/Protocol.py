@@ -18,7 +18,8 @@
 #__________SYSTEM MESSAGES__________
 MSG_NONE            = 0
 #__________DGS__________
-# uint16  - message id
+# Stub message to define a null message.
+# This should never be sent.
 
 MSG_PING_REQ        = 1
 #__________DGS__________
@@ -46,32 +47,48 @@ MSG_AUTH_REQ        = 10
 MSG_AUTH_RES        = 11
 #__________DGS__________
 # uint16  - message id
-# 0=Failed, 1=Already connected, 2=Invalid password, 3=Ok
+# uint32  - response
+#            0 = Failed
+#            1 = Already authorized
+#            2 = Invalid password
+#            3 = Ok
 
 MSG_MAPLIST_REQ     = 12
 #__________DGS__________
 # uint16  - message id
-# No data passed
 
 MSG_MAPLIST_RES     = 13
 #__________DGS__________
 # uint16  - message id
-# mapname (String), mapfilename (String), md5sum (String)
+# string  - 'SOT' indicates the start of transmission
+# string  - Map name
+# string  - Map filename
+# string  - Map MD5 ID
+# string  - 'T' indicates the transmission will continue with another item
+#         .
+#         .
+#         .
+# string  - 'EOT' indicates the end of transmission
 
 MSG_GAMELIST_REQ    = 14
 #__________DGS__________
 # uint16  - message id
-# No data passed
 
 MSG_GAMELIST_RES    = 15
 #__________DGS__________
 # uint16  - message id
-# int32   - Game id
+# string  - 'SOT' indicates the start of transmission
+# int32   - Game ID
 # string  - Game name
-# uint32  - Max players
+# uint32  - Number of players
 # string  - Map name
 # uint32  - Start time
 # uint32  - Turn number
+# string  - 'T' indicates the transmission will continue with another item
+#         .
+#         .
+#         .
+# string  - 'EOT' indicates the end of transmission
 
 MSG_NEWGAME_REQ     = 16
 #__________DGS__________
@@ -86,11 +103,19 @@ MSG_NEWGAME_RES     = 17
 # int32   - Status
 #            -1 = Failure
 #             0 = Need map
-#            +X = Game ID
+#            +X = X is an integer representing the game ID
 
-MSG_JOINGAME_REQ    = 18 # id (uint32)
-MSG_JOINGAME_RES    = 19 # 0=No such game, 1=Game full, 2=Ok
+MSG_JOINGAME_REQ    = 18
+#__________DGS__________
+# uint16  - message id
 
+MSG_JOINGAME_RES    = 19
+#__________DGS__________
+# uint16  - message id
+# uint32  - Status
+#            0 = No such game
+#            1 = Game full
+#            2 = Ok
 
 #__________IN-GAME MESSAGES__________
 MSG_INGAME          = 50

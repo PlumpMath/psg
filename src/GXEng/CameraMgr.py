@@ -16,7 +16,7 @@ from direct.showbase.DirectObject import DirectObject
 from pandac.PandaModules import Vec3
 
 # PSG imports
-from GSEng import Event
+import Event
 
 class CameraManager(DirectObject):
 	'''A class that controls the camera'''
@@ -35,6 +35,9 @@ class CameraManager(DirectObject):
 		Event.Dispatcher().register(self, 'E_Key_CameraLeft-up', self.keyMove)
 		Event.Dispatcher().register(self, 'E_Key_CameraRight', self.keyMove)
 		Event.Dispatcher().register(self, 'E_Key_CameraRight-up', self.keyMove)
+		
+		# Turn off default camera movement
+		base.disableMouse()
 		
 		# Set camera properties
 		base.camLens.setFov(60.0)

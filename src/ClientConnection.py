@@ -3,6 +3,14 @@
 	The ClientConnection connects to a game server and passes messages
 	between the game and the server.
 	
+	ATTRIBUTES
+	address - The address (FQDN or IP address) the client will connect to
+	port    - The port the client will connect to
+	timeout - The connection timeout.
+	
+	METHODS
+	
+	
 	Author:			Chad Rempp
 	Date:			2009/05/09
 	License:		GNU LGPL v3
@@ -48,29 +56,46 @@ class ClientConnection(object):
 					   MSG_NEWGAME_RES:    None,
 					   MSG_JOINGAME_RES:   None}
 	def __init__(self):
+		''' ClientConnection constructor.'''
 		self._cManager   = QueuedConnectionManager()
 		self._cListener  = QueuedConnectionListener(self._cManager, 0)
 		self._cReader    = QueuedConnectionReader(self._cManager, 0)
 		self._cWriter    = ConnectionWriter(self._cManager,0)
 	
 	def isConnected(self):
+		''' Return True if a connection is established, otherwise False.'''
 		return self._connected
 	
 	def isAuthorized(self):
+		''' Return True if the connection is authorized, otherwise False.'''
 		return self._authorized
 	
 	def authenticate(self, username, password, callback):
-		''' Send authentication request. Callback will be called with the
-			response.'''
+		''' Send authentication request.
+			
+			username (string): Username for authentication
+			password (string): Password for authentication
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status)
+					status = 0 if authorization failed
+					status = 1 if the user is already authenticated
+					status = 2 if an invalid password is supplied
+					status = 3 if authentication succeeded
+		'''
 		self.__sendAuthReq(username, password)
 		self._respCallback[MSG_AUTH_RES] = callback
 	
 	def connect(self, address, port, timeout, callback=None):
-		''' Try to connect to the server. If successfull callback is passed True,
-			else False.
+		''' Try to connect to the server.
+			
 			address (String): address for the server
 			port (Int): port to connect to
-			timeout (Int): how long to wait before giving up (milliseconds)'''
+			timeout (Int): how long to wait before giving up (milliseconds)
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status)
+					status = True if connection succeeded
+					status = False if connection failed
+		'''
 		if self._connected:
 			LOG.notice("Already Connected!")
 		else:
@@ -97,7 +122,12 @@ class ClientConnection(object):
 		
 	def disconnect(self, callback):
 		''' Disconnect from the server.
-			If successful callback is passed 1, else 0.'''
+			
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status)
+					status = 1 if connection succeeded
+					status = 0 if connection failed
+		'''
 		if self._connected:
 			LOG.notice('Disconnecting...')
 			pkg = NetDatagram()
@@ -112,25 +142,64 @@ class ClientConnection(object):
 	
 	def getMapList(self, callback):
 		''' Send a request for a list of maps available on the server.
-			The server will return a list in the form
-			(filename,mapname,md5sum)'''
+			
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (mapDictList).
+				mapDictList is a list of dictionaries, each dictionary
+				represents a map. The following keys will be available in each
+				dictionary.
+					'filename' - The map filename
+					'mapname'  - The name of the map
+					'md5sum'   - The unique MD5 ID of the map
+		'''
 		self.__sendMapListReq()
 		self._respCallback[MSG_MAPLIST_RES] = callback
 	
 	def getGameList(self, callback):
 		''' Sends a request for a list of active games to the server.
-			On success callback is passed a dictionary of the form,
-			{id: 'descriptive string'}.'''
+			
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (gameDictList).
+				gameDictList is a list of dictionaries, each dictionary
+				represents a game. The following keys will be available in each
+				dictionary.
+					'id'          - The game ID
+					'name'        - The game's name
+					'numplayer'   - The number of players for this game
+					'mapname'     - The name of the map for this game
+					'mapfilename' - The filename of the map for this game
+					'starttime'   - The game's start time
+					'turnnumber   - The game's turn number
+		'''
 		self.__sendGameListReq()
 		self._respCallback[MSG_GAMELIST_RES] = callback
 		
 	def newGame(self, gamename, mapID, numplayers, callback):
-		''' Send info to start a new game on the server.'''
+		''' Send info to start a new game on the server.
+			
+			gamename (string): The name of the game
+			mapID (string): The unique MD5 ID of the map to use for this game
+			numplayers (int): The number of players allowed for this game
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status).
+					status = -1 if the server failed to create the game
+					status = 0 if the server needs the map in order to create
+					status = x if the server succeeded in creating the game
+								(x is the game ID)
+		'''
 		self.__sendNewGameReq(gamename, mapID, numplayers)
 		self._respCallback[MSG_NEWGAME_RES] = callback
 		
 	def joinGame(self, gameid, callback):
-		''' Attempt to join the game with ID=gameid.'''
+		''' Attempt to join the game with ID=gameid.
+		
+			gameid (int): The ID of the game to join
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status).
+					status = 0 if no such game exists
+					status = 1 if game is full
+					status = 2 if joining game was successful
+		'''
 		self.__sendJoinGameReq(gameid)
 		self._respCallback[MSG_JOINGAME_RES] = callback
 	
@@ -262,22 +331,22 @@ class ClientConnection(object):
 			client (Connection): the connection that this datagram came from'''
 		
 		# Unpack message data
-		accept = data.getUint32()
+		response = data.getUint32()
 		
-		if (accept == 0):
+		if (response == 0):
 			LOG.error("Authorization for server failed for an unknown reason.")
 			self.disconnect(None)
-		elif (accept == 1):
+		elif (response == 1):
 			LOG.error("You are already connected to this server. This could be due to an unclean disconnect.")
-		elif (accept == 2):
+		elif (response == 2):
 			LOG.error("Incorrect password")
-		elif (accept == 3):
+		elif (response == 3):
 			LOG.notice("Authorization granted.")
 			self._authorized = True
 		
 		# If there is a callback function pass the game list to it
 		if self._respCallback[MSG_AUTH_RES]:
-			self._respCallback[MSG_AUTH_RES](accept)
+			self._respCallback[MSG_AUTH_RES](response)
 			self._respCallback[MSG_AUTH_RES] = None
 	
 	def __sendGameListReq(self):
@@ -311,7 +380,7 @@ class ClientConnection(object):
 			indicator   = data.getString()
 			games.append({'id':id,
 						  'name':name,
-						  'maxplayers':maxPlayers,
+						  'numplayers':maxPlayers,
 						  'mapname':mapName,
 						  'mapfilename':mapFileName,
 						  'starttime':startTime,

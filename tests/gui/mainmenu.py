@@ -1,2 +1,0 @@
-from controls import *
-

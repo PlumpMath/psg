@@ -21,14 +21,14 @@ class Game(object):
 	''' The game class stores the basic information for games.'''
 	def __init__(self):
 		''' Creates a new game.'''
-		self.id         = -1
-		self.name       = ''
-		self.numPlayers = 0
-		self.turnNumber = 0
-		self.turnNumber = 0
-		self.startTime  = 0
-		self.mapFile    = ''
-		self.map        = None
+		self.id          = -1
+		self.name        = ''
+		self.numPlayers  = 0
+		self.turnNumber  = 0
+		self.turnNumber  = 0
+		self.startTime   = 0
+		self.mapFile     = ''
+		self.map         = None
 		
 		self._mapStore = MapStore()
 		
@@ -42,13 +42,14 @@ class Game(object):
 		if self.mapFile is not '' and os.path.exists(MAP_PATH + self.mapFile):
 			self.map = self._mapStore.loadMap(self.mapFile)
 		
+	def runTime(self):
+		if self.startTime > 0:
+			return time.time() - self.startTime
+		else:
+			return self.startTime
+		
 	def __repr__(self):
-		r = "<ClientGame: id=%d, name=%s, maxPlayers=%d,\n"%(self.id, self.name, self.maxPlayers)
+		r = "<ClientGame: id=%d, name=%s, numPlayers=%d,\n"%(self.id, self.name, self.numPlayers)
 		r+= "             startTime=%s, turnNumber=%d\n"%(self.startTime, self.turnNumber)
-		r+= "             mapName=%s,\n"%self.mapName
-		r+= "             mapFileName=%s\n"%self.mapFileName
-		r+= "  Players:\n"
-		for p in self.players:
-			r+= "             %s\n"%p.name
-		r+= ">"
+		r+= "             mapFile=%s\n>"%self.mapFile
 		return r

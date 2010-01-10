@@ -52,7 +52,10 @@ class Dialog(Pane):
 		del(self)
 		
 class SelList(SingleSelectList):
-	''' A slightly modified SingleSelectList'''
+	''' A slightly modified SingleSelectList
+	
+		This selection list provides methods to add and remove items.
+	'''
 	def __init__(self,options,*args,**kargs):
 		SingleSelectList.__init__(self, options, *args,**kargs)
 		self.buttons = []
@@ -82,6 +85,13 @@ class SelList(SingleSelectList):
 				newButtons.append(button)
 		self.buttons = newButtons
 	
+	def clearOptions(self):
+		#print self.children
+		for b in self.buttons:
+			b.visible = False
+			#self.remove(b)
+		self.buttons = []
+	
 	def setSelectedOption(self, value):
 		""" selects a button with the option """
 		if self.selectedButton:
@@ -95,7 +105,7 @@ class SelList(SingleSelectList):
 				self.selectedButton.color = (.4,.4,.4,1)
 				self.onSelect()
 				return True
-	
+				
 	def onSelect(self):
 		#print("Selected %s"%self.value)
 		pass
@@ -176,15 +186,10 @@ class MainScreen(object):
 	def exit(self):
 		Event.Dispatcher().broadcast(Event.Event('E_ExitProgram',src=self))
 		
-	def startGame(self):
+	def startGame(self, gameID):
+		''' Clean up all the menus and then tell dispatcher to start the game'''
 		self.background.destroy()
-		#if self.main: self.main.hide()
-		#self.single.hide()
-		#self.multi.hide()
-		#del(self.main)
-		#del(self.single)
-		#del(self.multi)
-		Event.Dispatcher().broadcast(Event.Event('E_StartGame', src=self))
+		Event.Dispatcher().broadcast(Event.Event('E_StartGame', src=self, data=gameID))
 
 class MainPane(Pane):
 	def __init__(self, parent, gcli):
@@ -232,11 +237,14 @@ class MultiPane(Pane):
 			self.y = MENUPOS[1]
 			self.width = MENUSIZE[0]
 			self.height = MENUSIZE[1]
+			
+			DEBUG_NAME = "Test Game"
+			
 			self.add(Label("NEW NETWORK GAME",
 						   pos=(160,1)))
 			self.add(Label("Name",
 						   pos=(MENUPAD[0],MENUPAD[2])))
-			self.i_name = self.add(Entry("",
+			self.i_name = self.add(Entry(DEBUG_NAME,
 										 pos = (MENUPAD[0]+140, MENUPAD[2]),
 										 size = (220,10)))
 			self.add(Label("Number of Players",
@@ -263,9 +271,6 @@ class MultiPane(Pane):
 			
 			
 		def _ok(self):
-			def response(status):
-				print("status=%s"%status)
-				
 			self.createDialog = gui.add(Dialog())
 			if (self.i_name.text is ''):
 				self.createDialog.text = "Please enter a name for the game"
@@ -304,14 +309,16 @@ class MultiPane(Pane):
 		def _refreshMaps(self):
 			self._mapStore.rescan()
 			mapList = self._mapStore.getAvailableNames()
+			for b in self.s_maps.buttons:
+				self.remove(b)
 			for m in mapList:
 				self.s_maps.addOption(m)
-				#print("map=%s"%(m))
 		
 	def __init__(self, parent, gcli):
 		Pane.__init__(self)
 		self._widgetClickers = dict()
-		#self.gcli = gcli
+		self._parent = parent
+		self._gcli = gcli
 		self.x = MENUPOS[0] 
 		self.y = MENUPOS[1]
 		self.width = MENUSIZE[0]
@@ -359,6 +366,12 @@ class MultiPane(Pane):
 										pos=(MENUPAD[0],MENUSIZE[1]-MENUPAD[3]-45),
 										size=(100,12)))
 		self._disable(self.b_create)
+		
+		self.add(Button("Join Game",
+						self._join,
+						pos=(MENUSIZE[0]-MENUPAD[1]-95,MENUSIZE[1]-MENUPAD[3]-45),
+						size=(100,12)))
+		
 		self.add(Button("Main Menu",
 						parent.showMain,
 						pos=(MENUPAD[0],MENUSIZE[1]-MENUPAD[3]-20),
@@ -403,9 +416,10 @@ class MultiPane(Pane):
 		LOG.notice('Updating games...')
 		
 		def onResp(games):
-			# TODO - Fill in game list
-			print("games - %s"%games)
-			
+			for g in games:
+				self.s_games.addOption("%s - %s"%(g['id'],g['name']))
+		
+		self.s_games.clearOptions()
 		
 		self._clientcon.getGameList(onResp)
 	
@@ -439,7 +453,6 @@ class MultiPane(Pane):
 				self._setConnected()
 				self._refreshGames()
 				connectDialog.button.text = "ok"
-				
 				#self.updateGameList()
 			
 		LOG.notice("connecting server=%s port=%s user=%s, pass=%s"%(self.i_server.text, self.i_port.text, self.i_username.text, self.i_password.password))
@@ -466,9 +479,34 @@ class MultiPane(Pane):
 		cPane = self.createPane(self)
 		gui.add(cPane)
 		
+	def _join(self):
+		''' Join the selected game
+			
+			The only way I can think of attaching the game ID to the selection
+			list is in the button text so now we need to extract it.
+		'''
+		def response(status):
+			if (status == 0):
+				joinDialog.text = "could not find the game"
+			elif (status == 1):
+				joinDialog.text = "the game is full"
+			elif (status == 2):
+				joinDialog.visible = False
+				self._parent.startGame(gameID)
+			else:
+				joinDialog.text = "unknown error"
+		
+		if (self.s_games.getSelectedOption() is not None):
+			gameString = self.s_games.buttons[self.s_games.getSelectedOption()].text
+			gameID = int(gameString.split('-')[0].strip())
+			joinDialog = gui.add(Dialog())
+			joinDialog.text = "joining game '%s'"%gameString
+			self._clientcon.joinGame(gameID, response)
+		
 class OptionPane(Pane):
 	def __init__(self, parent, gcli):
 		Pane.__init__(self)
+		self._parent = parent
 		self.gcli = gcli
 		self.x = MENUPOS[0] 
 		self.y = MENUPOS[1]
@@ -478,6 +516,7 @@ class OptionPane(Pane):
 class SinglePane(Pane):
 	def __init__(self, parent, gcli):
 		Pane.__init__(self)
+		self._parent = parent
 		self.gcli = gcli
 		self.x = MENUPOS[0] 
 		self.y = MENUPOS[1]
@@ -487,6 +526,7 @@ class SinglePane(Pane):
 class PlayerPane(Pane):
 	def __init__(self, parent, gcli):
 		Pane.__init__(self)
+		self._parent = parent
 		self.gcli = gcli
 		self.x = MENUPOS[0] 
 		self.y = MENUPOS[1]
@@ -496,6 +536,7 @@ class PlayerPane(Pane):
 class CreditsPane(Pane):
 	def __init__(self, parent, gcli):
 		Pane.__init__(self)
+		self._parent = parent
 		self.gcli = gcli
 		self.x = MENUPOS[0] 
 		self.y = MENUPOS[1]

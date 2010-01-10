@@ -5,7 +5,7 @@ import sys
 class World(DirectObject):
 	def __init__(self):
 		sys.path.append('../src')
-		from SkyBox import SkyBox
+		from GXEng.SkyBox import SkyBox
 		base.camLens.setFov(60)
 		camera.setPos(0,0,0)
 		sb = SkyBox(render,

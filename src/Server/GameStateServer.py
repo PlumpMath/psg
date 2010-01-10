@@ -16,11 +16,12 @@ from Server.ServerConsts import *
 class GameStateServer(Game):
 	'''A class that keeps track of the game state.'''
 	
-	# Connections relevent to this game
-	connections = []
-	
 	def __init__(self, gameName='', numPlayers=0, mapID=''):
 		super(GameStateServer, self).__init__()
+		
+		# Connections relevent to this game
+		self.connections = []
+		
 		# Get an ID
 		if (len(GAME_IDS) > 0):
 			id = GAME_IDS[0]
@@ -40,9 +41,19 @@ class GameStateServer(Game):
 			GAME_IDS.append(self.id)
 			GAME_IDS.sort()
 	
-	def addPlayer(client):
+	def addPlayer(self, client):
 		self.connections.append(client)
 	
+	def isPlayerInGame(self, client):
+		return client in self.connections
+		
+	def removePlayer(self, client):
+		if client in self.connections:
+			self.connections.remove(client)
+			
+	def startGame(self):
+		self.startTime = time.time()
+		
 	def route(self, data, msgID, client):
 		self.__handleDatagrame(data, msgID, client)
 	

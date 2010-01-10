@@ -31,10 +31,12 @@ from GSEng import Player
 from GSEng.Game import Game
 from Util.Singleton import Singleton
 
-class GameStateManager(Game):
+class GSMgr(Game):
 	'''A class that keeps track of the game state.'''
 	
 	__metaclass__ = Singleton
+	
+	_gxmgr = None
 	
 	# States
 	s_WaitingForSelection = True
@@ -44,7 +46,9 @@ class GameStateManager(Game):
 	currentPlayer = None
 	
 	def __init__(self):
-		super(GameStatemanager, self).__init__()
+		super(GSMgr, self).__init__()
+		LOG.notice("Starting GS Manager")
+		
 		self.entitymanager = Entity.EntityManager()
 		Event.Dispatcher().register(self, 'E_Key_Move', self.onMoveKey)
 		Event.Dispatcher().register(self, 'E_Key_Exit', self.onExitKey)
@@ -53,6 +57,8 @@ class GameStateManager(Game):
 		Event.Dispatcher().register(self, 'E_Mouse_1', self.onMouse1)
 		self.selector = Controller.Selector()
 		
+	def registerGXEng(self, gxmgr):
+		self._gxmgr = gxmgr
 	
 	def onMoveKey(self, event):
 		if isinstance(self.selected, ShipEntity):
@@ -111,33 +117,37 @@ class GameStateManager(Game):
 				self.selected = None
 				# Enter waitingforselection state
 				self.s_WaitingForSelection = True
-			
-	def startGame(self):
+	
+	def loadState(self):
+		pass
+	
+	def startGame(self, gameID):
 		''' Create game objects and start game.'''
 		
 		# Load map
 		self.loadMap()
-		players = serializedMap.getPlayers()
-		planets = serializedMap.getPlanets()
-		ships   = serializedMap.getShips()
+		self._gxmgr.loadMap(None)
+		#players = serializedMap.getPlayers()
+		#planets = serializedMap.getPlanets()
+		#ships   = serializedMap.getShips()
 		#print('SM - %s'%str(serializedMap._planets))
-		print("num planets = %d"%len(planets))
-		print("num ships = %d"%len(ships))
+		#print("num planets = %d"%len(planets))
+		#print("num ships = %d"%len(ships))
 		
-		print(planets)
+		#print(planets)
 		# Players
-		for p in players:
-			self.players.append(Player(name=p['name'], faction=p['faction'], type=p['type'],ai=p['ai']))
+		#for p in players:
+		#	self.players.append(Player(name=p['name'], faction=p['faction'], type=p['type'],ai=p['ai']))
 			
 		# Planets
-		for e in planets:
-			print(e)
-			self.entitymanager.addEntity(e)
+		#for e in planets:
+		#	print(e)
+		#	self.entitymanager.addEntity(e)
 		
 		# Ships
-		for e in ships:
-			print(e)
-			self.entitymanager.addEntity(e)
+		#for e in ships:
+		#	print(e)
+		#	self.entitymanager.addEntity(e)
 			
 		'''
 		# Create players (for testing just 1 human, 1 computer)

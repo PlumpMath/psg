@@ -1,6 +1,12 @@
 ''' Representation.py
 	
 	Graphical representations of the entity objects.
+	
+	Each entity has a corresponding representation. The representation class
+	that is instantiated is determined by the name of the entity class. For
+	example, if the GSEng asks for a representation for an EntityLightCapture
+	class a RepresentationLightCapture intance will be returned. For this
+	reason the representation class names must match the entity class names.
 
 	Author:			Chad Rempp
 	Date:			2009/05/07
@@ -23,51 +29,6 @@ from Settings import GameSettings
 from GSEng import Entity
 from GXEng import View
 from GXEng import GeomObjects
-
-class RepresentationManager(object):
-	_representations = []
-	def __init__(self):
-		#Event.Dispatcher().register(self, 'E_EntitySelect', self.handleSelection)
-		Event.Dispatcher().register(self, 'E_New_EntityRep', self.handleNewRep)
-		
-	def handleSelection(self, event):
-		self.getRep(tag=event.data).select()
-		
-	def addRepresentation(self, rep):
-		if not rep in self._representations:
-			self._representations.append(rep)
-			
-	def delRepresentation(self, rep):
-		try:
-			self._representations.remove(rep)
-		except:
-			pass
-			
-	def handleNewRep(self, event):
-		e = event.data
-		if isinstance(e, Entity.EntityLightCapture):
-			r = RepLightCapture(entity=e)
-			e.representation = r
-			self.addRepresentation(r)
-		elif isinstance(e, Entity.EntityHeavyCapture):
-			r = RepLightCapture(entity=e)
-			e.representation = r
-			self.addRepresentation(r)
-		elif isinstance(e, Entity.EntityPlanet):
-			r = RepPlanet(entity=e)
-			e.representation = r
-			self.addRepresentation(r)
-			
-	def getRep(self,  model=None,  tag=None):
-		if model != None:
-			for r in self._representations:
-				if r.model == model:
-					return r
-		if tag != None:
-			for r in self._representations:
-				if r.getTag() == tag:
-					return r
-		return None
 
 class Representation(object):
 	'''An abstract class that represents any logical entity in the game.'''

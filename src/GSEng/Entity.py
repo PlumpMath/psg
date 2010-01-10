@@ -19,9 +19,12 @@ from Util.Singleton import Singleton
 import Event
 
 
-class EntityManager(Singleton):
+class EntityManager(object):
 	'''
+	
 	'''
+	__metaclass__ = Singleton
+	
 	_entities = []
 	def __init__(self):
 			pass

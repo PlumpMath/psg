@@ -229,10 +229,15 @@ class PSGServer():
 			data (PyDatagramIterator): the list of data sent with this datagram
 			msgID (Int): the message ID
 			client (Connection): the connection that this datagram came from'''
-			
-		# Client responded so remove from non-responder list
-		del(self.pingNonResponders[client])
+		
 		self._console.printNotice('%s: Ping response'%(client.getAddress().getIpString()))
+		
+		# Client responded so remove from non-responder list
+		try:
+			del(self.pingNonResponders[client])
+		except KeyError:
+			self._console.printNotice("%s responded to ping but was not in pingNonResponders"%client.getAddress())
+		
 	
 	def __handleDisconnect(self, data, msgID, client):
 		''' Disconnect and send confirmation to the client.
@@ -244,6 +249,11 @@ class PSGServer():
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_DISCONNECT_RES)
 		self._cWriter.send(pkg, client)
+		
+		# If user has joined a game, remove the player from that game
+		for g in self.games:
+			if g.isPlayerInGame(client):
+				g.removePlayer(client)
 		
 		# If user is logged in disconnect
 		username = ''
@@ -397,6 +407,7 @@ class PSGServer():
 		
 		# Find the game
 		game = None
+		print self.games
 		for g in self.games:
 			if g.id == id:
 				game = g
@@ -404,7 +415,7 @@ class PSGServer():
 		if game == None:
 			LOG.debug('No such game')
 			resp = 0
-		elif len(game.players) >= game.maxPlayers:
+		elif len(game.connections) >= game.numPlayers:
 			LOG.debug('Game full')
 			resp = 1
 		else:

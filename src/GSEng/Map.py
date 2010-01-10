@@ -29,16 +29,13 @@ class Map(Serializable):
 	The Map object is used to serialize most of the static game data. Map
 	objects should not persist. Load the data and let it die.
 	
-	cPickle will not follow object references so to serialize the players and
-	entities it is necessary to include the serialized data for each directly
-	in this object.
 	'''
 
-	_VERSION    = '0.1'
-	name        = 'Default Map'
-	id          = 0
-	playerCount = 0
-	mapSize     = (150,150,80)
+	_VERSION   = '0.1'
+	name       = 'Default Map'
+	id         = 0
+	numPlayers = 0
+	mapSize    = (150,150,80)
 
 	def __init__(self, filename=''):
 		if filename is not '':
@@ -57,9 +54,10 @@ class MapStore(object):
 		dictionary and then closes the map. This is to prevent massive memory
 		usage. When a map is needed at a later time it will be reloaded.'''
 	
+	availableMaps = []
+	
 	def __init__(self):
 		LOG.notice("Creating MapStore")
-		self.availableMaps = list()
 		self.rescan()
 	
 	def rescan(self):
@@ -67,11 +65,13 @@ class MapStore(object):
 			
 			Start fresh and load map data.
 		'''
-		self.availableMaps = list()
+		self.availableMaps = []
+		
 		for f in os.listdir(MAP_PATH):
 			if (os.path.splitext(f)[1] == MAP_EXT):
 					map = self.loadMap(filename=f)
-					self.availableMaps.append({'id':self.getMapMD5(f), 'filename':f, 'name':map.name, 'obj':None})
+					dict = {'id':self.getMapMD5(f), 'filename':f, 'name':map.name, 'obj':None}
+					self.availableMaps.append(dict)
 	
 	def getMapDict(self, filename='', id='', name=''):
 		''' Return the map dictionary with the filename or id.'''
@@ -112,7 +112,6 @@ class MapStore(object):
 				return mDict['obj']
 		else:
 			m = Map("%s%s"%(MAP_PATH,filename))
-			self.availableMaps.append({'id':self.getMapMD5(filename), 'filename':filename, 'name':m.name, 'obj':m})
 			return m
 
 	def getMapMD5(self, filename):

@@ -25,7 +25,7 @@ class SkyBox(object):
 	
 	'''
 	
-	def __init__(self, parent, modelFile='', shaderFile='', textureFile1='', textureFile2=''):
+	def __init__(self, parent, modelFile='data/models/skybox_02.egg', shaderFile='data/shaders/sky.sha', textureFile1='data/textures/tex_skybox_01.jpg', textureFile2='data/textures/tex_skybox_cloud.png'):
 		#print(os.getcwd())
 		self.modelFile    = modelFile
 		self.shaderFile   = shaderFile

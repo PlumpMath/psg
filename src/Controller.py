@@ -42,7 +42,6 @@ class KeyboardController(DirectObject):
 class MouseController(DirectObject):
 	'''This class registers mouse events with Panda3D and broadcasts events'''
 	def __init__(self):
-		
 		# Register events
 		self.accept("mouse1",     Event.Dispatcher().broadcast, [Event.Event('E_Mouse_1', self)])
 		self.accept("mouse2",     Event.Dispatcher().broadcast, [Event.Event('E_Mouse_2', self)])
