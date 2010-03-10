@@ -25,17 +25,20 @@ class Game(object):
 		self.name        = ''
 		self.numPlayers  = 0
 		self.turnNumber  = 0
-		self.turnNumber  = 0
 		self.startTime   = 0
 		self.mapFile     = ''
 		self.map         = None
+		self.mapSize     = None
 		
 		self._mapStore = MapStore()
 		
 	def loadMap(self, filename='', id=''):
-		''' Load the map '''
+		''' Load the map
+			
+			TODO - Can this be removed?
+		'''
 		if id is not '':
-			self.mapFile = self._mapStore.getMapDict(id=id)['filename']
+			self.mapFile = self._mapStore.getMap(id=id)['filename']
 			self.map = self._mapStore.loadMap(self.mapFile)
 		if filename is not '':
 			self.mapFile = filename
@@ -49,7 +52,7 @@ class Game(object):
 			return self.startTime
 		
 	def __repr__(self):
-		r = "<ClientGame: id=%d, name=%s, numPlayers=%d,\n"%(self.id, self.name, self.numPlayers)
-		r+= "             startTime=%s, turnNumber=%d\n"%(self.startTime, self.turnNumber)
-		r+= "             mapFile=%s\n>"%self.mapFile
+		r = "<ClientGame: id=%d, name=%s, numPlayers=%d, "%(self.id, self.name, self.numPlayers)
+		r+= "startTime=%s, turnNumber=%d "%(self.startTime, self.turnNumber)
+		r+= "mapFile=%s>"%self.mapFile
 		return r

@@ -41,4 +41,12 @@ Game Gui
 Ship movement
 	* Highlight effect (colors, trans, ...)
 	* Line effect (colors, trans, ...)
-	
+
+NOTES ON INSTALLING TREEGUI
+- copy treegui3/treegui/* to psg/src/GUI/Treegui
+- copy treegui3/cfg/* to psg/cfg
+- copy treegui3/rtheme/* to psg/src/GUI/rtheme
+- for each file in psg/src/GUI/Treegui and psg/src/GUI/rtheme change the import statements. For example:
+- change "from core import *" to "from GUI.Treegui.core import *"
+- change "import eggatlas" to "from GUI.Treegui import eggatlas"
+- in the file psg/src/GUI/rtheme/__init__.py change RAW_DIR = "rtheme" to RAW_DIR = "src/GUI/rtheme"

@@ -24,7 +24,7 @@ import sys, random, cPickle
 # PSG imports
 import Controller
 import Event
-#from GXEng import GeomObjects
+from GXEng import GXMgr
 from GSEng import Entity
 from GSEng import Player
 #from GSEng.Map import Map
@@ -36,7 +36,11 @@ class GSMgr(Game):
 	
 	__metaclass__ = Singleton
 	
-	_gxmgr = None
+	_gxmgr  = None
+	_entmgr = None
+	_game   = None
+	
+	players = []
 	
 	# States
 	s_WaitingForSelection = True
@@ -45,11 +49,19 @@ class GSMgr(Game):
 	selected = None
 	currentPlayer = None
 	
-	def __init__(self):
-		super(GSMgr, self).__init__()
-		LOG.notice("Starting GS Manager")
+	def __init__(self, clientconnection):
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[GSMgr] Initializing")
 		
-		self.entitymanager = Entity.EntityManager()
+		super(GSMgr, self).__init__()
+		
+		self._clientconnection = clientconnection
+		
+		self._entmgr = Entity.EntityManager()
+		#self._gxmgr  = GXEMgr.GXMgr()
+		
 		Event.Dispatcher().register(self, 'E_Key_Move', self.onMoveKey)
 		Event.Dispatcher().register(self, 'E_Key_Exit', self.onExitKey)
 		Event.Dispatcher().register(self, 'E_EntitySelect', self.onEntitySelect)
@@ -57,8 +69,19 @@ class GSMgr(Game):
 		Event.Dispatcher().register(self, 'E_Mouse_1', self.onMouse1)
 		self.selector = Controller.Selector()
 		
+		
 	def registerGXEng(self, gxmgr):
+		'''
+			TODO - Document
+		'''
+		
+		LOG.debug("[GSMgr] registering GXMgr %s"%gxmgr)
+		
+		# The GSMgr needs to know about the GXMgr
 		self._gxmgr = gxmgr
+		
+		# The EntityMagager needs to know about the GXMgr
+		self._entmgr.registerGXEng(gxmgr)
 	
 	def onMoveKey(self, event):
 		if isinstance(self.selected, ShipEntity):
@@ -121,61 +144,55 @@ class GSMgr(Game):
 	def loadState(self):
 		pass
 	
-	def startGame(self, gameID):
+	def startGame(self, map):
 		''' Create game objects and start game.'''
 		
-		# Load map
-		self.loadMap()
-		self._gxmgr.loadMap(None)
-		#players = serializedMap.getPlayers()
-		#planets = serializedMap.getPlanets()
-		#ships   = serializedMap.getShips()
-		#print('SM - %s'%str(serializedMap._planets))
-		#print("num planets = %d"%len(planets))
-		#print("num ships = %d"%len(ships))
+		LOG.debug("[GSMgr] Starting game with map %s"%map)
 		
-		#print(planets)
-		# Players
-		#for p in players:
-		#	self.players.append(Player(name=p['name'], faction=p['faction'], type=p['type'],ai=p['ai']))
-			
-		# Planets
-		#for e in planets:
-		#	print(e)
-		#	self.entitymanager.addEntity(e)
+		def registerResp(status):
+			''' dummy function. This should begin the turn mechanism.'''
+			LOG.notice("Register response - %s"%status)
 		
-		# Ships
-		#for e in ships:
-		#	print(e)
-		#	self.entitymanager.addEntity(e)
-			
-		'''
-		# Create players (for testing just 1 human, 1 computer)
-		self.players.append(Player.Player("Player1"))
-		self.players.append(Player.Player("Computer"))
+		# Set game parameters
+		self.name = map.name
+		self.numPlayers = map.numPlayers
+		self.mapSize = map.mapSize
 		
-		# Create planets
-		for i in range(10):
-			pos = Vec3(random.uniform(-200, 200), 
-								random.uniform(-200, 200), 
-								random.uniform(-30, 30))
-			p = Entity.EntityPlanet(tag="Planet-"+str(i), pos=pos)
-			self.entitymanager.addEntity(p)
-			#p.addEntity(e)
-		for i in range(3):
-			pos = Vec3(i*20, 0, 0)
-			e = Entity.EntityLightCapture(tag="Ship-"+self.players[0].name+"-"+str(i), pos=pos)
-			e.owner = self.players[0].name
-			self.entitymanager.addEntity(e)
-		for i in range(3):
-			pos = Vec3(i*20, 50, 0)
-			e = Entity.EntityLightCapture(tag="Ship-"+self.players[1].name+"-"+str(i), pos=pos)
-			e.owner = self.players[1].name
-			self.entitymanager.addEntity(e)
-		self.currentPlayer = self.players[0]
-		'''
+		# Load players
+		self.players = map.playerList
+		LOG.debug("[GSMgr]    Loaded %d players"%len(self.players))
 		
-	
+		# Load entities
+		entityCount = 0
+		for e in map.entityList:
+			self._entmgr.addEntity(e)
+			entityCount += 1
+		LOG.debug("[GSMgr]    Loaded %d entities"%entityCount)
+		
+		# Load lights
+		lightCount = 0
+		for l in map.lightList:
+			self._gxmgr.addLight(l['type'], l['tag'], l['pos'], l['color'], l['hpr'])
+			lightCount += 1
+		LOG.debug("[GSMgr]    Loaded %d lights"%lightCount)
+		
+		# Load cameras
+		cameraCount = 0
+		for c in map.cameraList:
+			self._gxmgr.addCamera(c)
+			cameraCount += 1
+		LOG.debug("[GSMgr]    Loaded %d cameras"%cameraCount)
+		
+		# Load skybox
+		self._gxmgr.addSkybox(map.skybox)
+		LOG.debug("[GSMgr]    Loaded skybox")
+		
+		# Turn on camera
+		self._gxmgr.CameraMgr.startCamera()
+		
+		# We are done loading so register with the server
+		#self._clientconnection.registerGame(self, registerResp)
+		
 class TurnMgr(object):
 	_usedEntities = []
 	def __init__(self):

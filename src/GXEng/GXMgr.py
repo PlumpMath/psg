@@ -8,11 +8,15 @@
 	Todo:			
 '''
 
+# Python imports
+from new import classobj
+
 # Panda imports
+import pandac.PandaModules # for dynamic light creation
 from pandac.PandaModules import FrameBufferProperties
 from pandac.PandaModules import GraphicsPipe
 from pandac.PandaModules import WindowProperties
-from pandac.PandaModules import AmbientLight
+
 from pandac.PandaModules import DirectionalLight
 from pandac.PandaModules import Vec4
 
@@ -27,59 +31,106 @@ class GXMgr(object):
 	''' Document me! '''
 	
 	views = []
+	cameraMgr = None
+	lightList = []
 	
 	def __init__(self):
-		LOG.notice("Starting GX Manager")
+		LOG.debug("[GXMgr] Initializing")
 		
 		# GXMgr no longer uses dispatcher for communication . I am worried that
 		# a message will not arrive and game state will be out of sync with the
 		# representations.
-		
-		# The following code should proabably be moved somewhere else
-		showFPS = GameSettings().showFPS
-		base.setFrameRateMeter(showFPS)
-		
 	
 	def buildRepresentation(self, entity):
 		''' Use the entity to build the appropriate representation. Return
 			a reference to the representation instance when done.
 		'''
+		LOG.debug("[GXMgr] Building representation of entity %s"%entity)
 		
+		rClass = None
 		if (entity.__class__.__name__[:6] == 'Entity'):
 			# Should wrap this in a try/except
-			kls = "Representation%s"%entity.__class__.__name__[6:]
-			LOG.notice("Building a %s"%kls)
+			kls = "Rep%s"%entity.__class__.__name__[6:]
 			rClass = getattr(Representation, kls)
-			
+		
+		LOG.debug("[GXMgr]   Built a %s"%kls)
 		return rClass()
 		
-	def loadMap(self, map):
-		''' Load the grapics objects defined in the map.
-			
-			This isn't the way I want to do this. We should not make the GXEng
-			dependent on the structure of the map.
+	
+	def addLight(self, type, tag, pos, color, hpr):
+		''' Create a light of the given type and assign the given properties.
+			Dynamic class instantantiation is difficult due to the Panda module
+			layout so we use conditionals
+			TODO - support for attenuation.
 		'''
 		
-		#For now we setup a dummy environment
-		self.sky = SkyBox.SkyBox(render)
-		self.camera = CameraMgr.CameraManager()
+		LOG.debug("[GXMgr] Adding light of type %s"%type)
 		
-		aLight = AmbientLight('aLight')
-		dLight = DirectionalLight('dLight')
-		aLight.setColor( Vec4(.6, .7, .8, 1) )
-		dLight.setColor( Vec4( 0.9, 0.8, 0.9, 1 ) )
-		alNP = render.attachNewNode(aLight) 
-		dlNP = render.attachNewNode(dLight)
-		dlNP.setHpr(0, -45, 0)
+		if hasattr(pandac.PandaModules, type):
+			LOG.debug("[GXMgr] Found light class - %s"%type)
+			
+			if (type.lower() == 'ambientlight'):
+				from pandac.PandaModules import AmbientLight
+				l = AmbientLight(tag)
+				if color:
+					l.setColor(color)
+				lnp = render.attachNewNode(l)
+			elif (type.lower() == 'directionallight'):
+				from pandac.PandaModules import DirectionalLight
+				l = DirectionalLight(tag)
+				if color:
+					l.setColor(color)
+				lnp = render.attachNewNode(l)
+				if hpr:
+					lnp.setHpr(hpr)
+			elif (type.lower() == 'pointlight'):
+				from pandac.PandaModules import PointLight
+				l = PointLight(tag)
+				if color:
+					l.setColor(color)
+				lnp = render.attachNewNode(l)
+				if pos:
+					lnp.setPos(pos)
+			elif (type.lower() == 'spotlight'):
+				from pandac.PandaModules import Spotlight
+				l = Spotlight(tag)
+				if lens:
+					lightLens = PerspectiveLens()
+					l.setLens(lightLens)
+				if color:
+					l.setColor(color)
+				lnp = render.attachNewNode(l)
+				if hpr:
+					lnp.setHpr(hpr)
+				if pos:
+					lnp.setPos(pos)
+			
+			self.lightList.append(lnp)
+			render.setLight(lnp)
+		else:
+			LOG.error("[GXMgr] Unknown light class - %s"%type)
 		
+	def addSkybox(self, skybox):
+		''' Add a skybox. '''
+		
+		LOG.debug("[GXMgr] Adding skybox %s"%skybox)
+		self.sky = skybox
 		self.sky.render()
+	
+	def addCamera(self, camera):
+		'''
+			TODO - Document
+		'''
+		
+		LOG.debug("[GXMgr] Adding camera %s"%camera)
+		self.CameraMgr = camera
 		
 	def makeGameEngine(self):
 		''' Creates a new game engine based on settings in GameSettings.
 			Information for this came from here
 			http://panda3d.org/phpbb2/viewtopic.php?t=2848'''
 		
-		LOG.notice("GXMgr - Making Game Engine")
+		LOG.debug("[GXMgr] Building game engine")
 		
 		# Create a new FrameBufferProperties object using our settings
 		fbProps = FrameBufferProperties()
@@ -104,4 +155,6 @@ class GXMgr(object):
 								GraphicsPipe.BFRequireWindow, # Flags
 								base.win.getGsg()) # GraphicsStateGaurdian
 		base.openMainWindow(props=winProps, gsg=base.win.getGsg(), keepCamera=1)
-		
+		# The following code should proabably be moved somewhere else
+		showFPS = GameSettings().showFPS
+		base.setFrameRateMeter(showFPS)

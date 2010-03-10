@@ -17,8 +17,8 @@ from direct.showbase.DirectObject import DirectObject
 # PSG imports
 from ClientConnection import ClientConnection
 #from GSEng.Game import Game
-from GUI.core import Gui
-from GUI.keys import Keys
+from GUI.Treegui.core import Gui
+from GUI.Treegui.keys import Keys
 from GUI.rtheme import RTheme
 from GUI.mainmenu import MainScreen
 from Settings import GameSettings
@@ -26,6 +26,7 @@ import Controller
 import Event
 import GameConsts
 from GSEng import GSMgr
+from GSEng.Map import *
 #from GSEng import Player
 from GXEng import GXMgr
 from Util.Log import LogConsole
@@ -51,23 +52,32 @@ class GameClient(DirectObject):
 		
 		# Create server connection object
 		self.clientconnection = ClientConnection()
-
+		
 		# Load settings
 		self.gst = GameSettings()
 		self.gst.loadSettings()
-				
+		
+		self._mapStore = MapStore()
+		
 		# Start menu GUI
 		self.gui = Gui(Keys(),theme=RTheme())
 		self.menu = MainScreen(self)
 		
-	def startGame(self, gameID):
-		# Kill current screen
+	def startGame(self, event):
+		'''
+			TODO - Document
+		'''
+		
+		mapMD5 = event.data
+		
+		LOG.debug("[GameClient] Starting game with map ID %s"%mapMD5)
+		
 		self.gui.clear()
 		del(self.menu)
 		del(self.gui)
 		
 		# Create GSM
-		self.gsm = GSMgr.GSMgr()
+		self.gsm = GSMgr.GSMgr(self.clientconnection)
 		
 		# Setup controls
 		self.keyboardcontroller = Controller.KeyboardController()
@@ -76,18 +86,27 @@ class GameClient(DirectObject):
 		# Create GXEng
 		self.gxm = GXMgr.GXMgr()
 		self.gxm.makeGameEngine()
+		
 		self.gsm.registerGXEng(self.gxm)
 		
 		#self.gamestate.loadGame(self.curr_game)
 		#self.gameFrame = GameWindow()
-		self.gsm.startGame(gameID)
+		LOG.debug("[GameClient] Loading map id %s"%mapMD5)
+		map = self._mapStore.loadMap(self._mapStore.getMap(mapMD5)['filename'])
+		#self.gxm.loadMap(map)
+		self.gsm.startGame(map)
 		
 	def exitGame(self, event):
 		''' Clean up open/running game. Show mainmenu.'''
+		LOG.debug("[GameClient] Exiting game")
 		self.gui = Gui(Keys(),theme=RTheme())
 		self.menu = MainScreen(self)
 		
 	def exitProgram(self, event):
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[GameClient] Exiting process")
 		# do any necessary cleanup
 		if self.clientconnection.isConnected():
 			self.clientconnection.disconnect(None)

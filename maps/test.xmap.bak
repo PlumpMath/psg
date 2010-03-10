@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="0.2" id="1">
+	<name>Debugger Map</name>
+	<size x="150" y="150" z="80" />
+	<numplayers>10</numplayers>
+	<players>
+		<player id="1">
+			<type>human</type>
+			<faction>Gorgons</faction>
+			<ai>none</ai>
+		</player>
+		<player id="2">
+			<type>human</type>
+			<faction>Alsonians</faction>
+			<ai>none</ai>
+		</player>
+		<player id="3">
+			<type>human</type>
+			<faction>Gorgons</faction>
+			<ai>none</ai>
+		</player>
+		<player id="4">
+			<type>human</type>
+			<faction>Alsonians</faction>
+			<ai>none</ai>
+		</player>
+		<player id="5">
+			<type>human</type>
+			<faction>Fretargs</faction>
+			<ai>none</ai>
+		</player>
+		<player id="6">
+			<type>human</type>
+			<faction>Gorgons</faction>
+			<ai>none</ai>
+		</player>
+		<player id="7">
+			<type>computer</type>
+			<faction>Fretargs</faction>
+			<ai>easy</ai>
+		</player>
+		<player id="8">
+			<type>computer</type>
+			<faction>Alsonians</faction>
+			<ai>easy</ai>
+		</player>
+		<player id="9">
+			<type>computer</type>
+			<faction>Gorgons</faction>
+			<ai>hard</ai>
+		</player>
+		<player id="10">
+			<type>computer</type>
+			<faction>Gorgons</faction>
+			<ai>easy</ai>
+		</player>
+	</players>
+	<entities>
+		<entity>
+			<type>LightCapture</type>
+			<position x="20" y="20" z="0" />
+			<hpr h="0" p="0" r="0" />
+			<owner id="1" />
+			<weapons></weapons>
+			<abilities></abilities>
+			<representation>
+				<model>ship_03.egg</model>
+			</representation>
+			<properties>
+				<moveRad>100</moveRad>
+				<attackRad>20</attackRad>
+				<sensorRad>800</sensorRad>
+				<fuel>99</fuel>
+				<cost>1000</cost>
+			</properties>
+			<state>
+				<moved s="" />
+				<attacked s="" />
+			</state>
+		</entity>
+		<entity>
+			<type>LightCapture</type>
+			<position x="20" y="20" z="0" />
+			<hpr h="0" p="0" r="0" />
+			<owner id="2" />
+			<weapons></weapons>
+			<abilities></abilities>
+			<representation>
+				<model>ship_03.egg</model>
+			</representation>
+			<properties>
+				<moveRad>100</moveRad>
+				<attackRad>20</attackRad>
+				<sensorRad>800</sensorRad>
+				<fuel>99</fuel>
+				<cost>1000</cost>
+			</properties>
+			<state>
+				<moved s="" />
+				<attacked s="" />
+			</state>
+		</entity>
+		<entity>
+			<type>LightCapture</type>
+			<position x="20" y="20" z="0" />
+			<hpr h="0" p="0" r="0" />
+			<owner id="3" />
+			<weapons></weapons>
+			<abilities></abilities>
+			<representation>
+				<model>ship_03.egg</model>
+			</representation>
+			<properties>
+				<moveRad>100</moveRad>
+				<attackRad>20</attackRad>
+				<sensorRad>800</sensorRad>
+				<fuel>99</fuel>
+				<cost>1000</cost>
+			</properties>
+			<state>
+				<moved s="" />
+				<attacked s="" />
+			</state>
+		</entity>
+		<entity>
+			<type>LightCapture</type>
+			<position x="20" y="20" z="0" />
+			<hpr h="0" p="0" r="0" />
+			<owner id="4" />
+			<weapons></weapons>
+			<abilities></abilities>
+			<representation>
+				<model>ship_03.egg</model>
+			</representation>
+			<properties>
+				<moveRad>100</moveRad>
+				<attackRad>20</attackRad>
+				<sensorRad>800</sensorRad>
+				<fuel>99</fuel>
+				<cost>1000</cost>
+			</properties>
+			<state>
+				<moved s="" />
+				<attacked s="" />
+			</state>
+		</entity>
+	</entities>
+	<camera>
+		<fov>40</fov>
+		<position x="0" y="20" z="20" />
+		<lookat x="0" y="0" z="0" />
+		<target x="0" y="0" z="0" />
+		<distance>40</distance>
+	</camera>
+	<skybox>
+		<model>skybox_02.egg</model>
+		<texture stage="Space" sort="1">tex_skybox_01.jpg</texture>
+		<texture stage="SpaceClouds" sort="2">tex_skybox_cloud.png</texture>
+		<shader>sky.sha</shader>
+	</skybox>
+	<lights>
+		<light type="AmbientLight" tag="aLight">
+			<color r="0.6" g="0.7" b="0.8" a="1.0" />
+		</light>
+		<light type="DirectionalLight" tag="dLight">
+			<color r="0.9" g="0.8" b="0.9" a="1.0" />
+			<hpr h="0" p="-45" r="0" />
+		</light>
+	</lights>
+</map>

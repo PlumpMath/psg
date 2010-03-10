@@ -19,9 +19,28 @@ from pandac.PandaModules import Vec3
 import Event
 
 class CameraManager(DirectObject):
-	'''A class that controls the camera'''
-	def __init__(self):
-		LOG.notice("Starting CameraManager")
+	''' A class that controls the camera
+		
+		Internally positions must be represented by Vec3
+	'''
+	def __init__(self, fov=60.0, pos=(0,20,0), lookAt=(0,0,0), target=(0,0,0), dist=40):
+		self.fov     = fov
+		self.pos     = Vec3(pos)
+		self.lookAt  = Vec3(lookAt)
+		self.target  = Vec3(target)
+		self.camDist = dist
+		
+		self.movingUp = False
+		self.movingDown = False
+		self.movingLeft = False
+		self.movingRight = False
+		self.dragging=False
+		
+		self.mx,self.my=0,0
+		
+	def startCamera(self):
+		LOG.debug("Starting CameraManager")
+		
 		# Register with Dispatcher
 		Event.Dispatcher().register(self, 'E_Mouse_3', self.startDrag)
 		Event.Dispatcher().register(self, 'E_Mouse_3_Up', self.stopDrag)
@@ -40,35 +59,33 @@ class CameraManager(DirectObject):
 		base.disableMouse()
 		
 		# Set camera properties
-		base.camLens.setFov(60.0)
+		base.camLens.setFov(self.fov)
+		base.camera.setPos(self.pos)
 		
-		self.movingUp = False
-		self.movingDown = False
-		self.movingLeft = False
-		self.movingRight = False
-		base.disableMouse()
-		base.camera.setPos(0,20,20)
-		base.camera.lookAt(0,0,0)
-		self.mx,self.my=0,0
-		self.dragging=False
-		self.target=Vec3()
-		self.camDist=40   
-		self.setTarget(0,0,0)
+		# The lookAt camera method doesn't work right at the moment.
+		# This should be moved into a seperate method of Camera Manager anyway
+		# so we can set this to the players start pos.
+		#base.camera.lookAt(self.lookAt)
+		
 		self.turnCameraAroundPoint(0,0,self.target,self.camDist)
+		
 		taskMgr.add(self.dragTask,'dragTask')
-			
+		
 	def turnCameraAroundPoint(self,tx,ty,p,dist):
 		newCamHpr=Vec3()
 		camHpr=base.camera.getHpr()
 		newCamHpr.setX(camHpr.getX()+tx)
 		newCamHpr.setY(camHpr.getY()-ty)
 		newCamHpr.setZ(camHpr.getZ())
+		
 		base.camera.setHpr(newCamHpr)
 		angleradiansX = newCamHpr.getX() * (math.pi / 180.0)
 		angleradiansY = newCamHpr.getY() * (math.pi / 180.0)
-		base.camera.setPos(  dist*math.sin(angleradiansX)*math.cos(angleradiansY)+p.getX(),
+		# HANG OCCURS HERE
+		base.camera.setPos( dist*math.sin(angleradiansX)*math.cos(angleradiansY)+p.getX(),
 						   -dist*math.cos(angleradiansX)*math.cos(angleradiansY)+p.getY(),
 						   -dist*math.sin(angleradiansY)+p.getZ()  )
+		
 		base.camera.lookAt(p.getX(),p.getY(),p.getZ() )
 		
 	def setTarget(self,x,y,z):

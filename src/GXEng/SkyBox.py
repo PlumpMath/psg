@@ -5,7 +5,6 @@
 	Author:			Chad Rempp
 	Date:			2009/12/12
 	License:		GNU LGPL v3 
-	Todo:			Serialize skybox, lights, camera
 '''
 
 # Python imports
@@ -25,39 +24,50 @@ class SkyBox(object):
 	
 	'''
 	
-	def __init__(self, parent, modelFile='data/models/skybox_02.egg', shaderFile='data/shaders/sky.sha', textureFile1='data/textures/tex_skybox_01.jpg', textureFile2='data/textures/tex_skybox_cloud.png'):
-		#print(os.getcwd())
+	def __init__(self, parent, modelFile='', shaderFile='', texture1File='', texture2File='', texture1Sort=0, texture2Sort=0):
+		LOG.debug("[SkyBox] Initializing")
 		self.modelFile    = modelFile
 		self.shaderFile   = shaderFile
-		self.textureFile1 = textureFile1
-		self.textureFile2 = textureFile2
+		self.texture1File = texture1File
+		self.texture2File = texture2File
+		self.texture1Sort = texture1Sort
+		self.texture2Sort = texture2Sort
 		self.parent       = parent
 		
+	def render(self):
+		LOG.debug("[SkyBox] Rendering")
+		
+		# If we are an orphan use render
+		if self.parent is None: self.parent = render
+		
+		#LOG.debug("[SkyBox] model=%s"%self.modelFile)
 		self.node  = loader.loadModel(self.modelFile)
 		
-		if self.textureFile1 != '' and self.textureFile2 == '':
-			t = loader.loadTexture(self.textureFile)
+		#print("tf1 = %s, tf2 = %s"%(self.texture1File,self.texture2File))
+		
+		if self.texture1File != '' and self.texture2File == '':
+			#LOG.debug("[SkyBox] single texture = %s"%self.texture1File)
+			t = loader.loadTexture(self.texture1File)
 			self.node.setTexture(t)
 			
-		elif self.textureFile1 != '' and self.textureFile2 != '':
-			t1 = loader.loadTexture(self.textureFile1)
+		elif self.texture1File != '' and self.texture2File != '':
+			#LOG.debug("[SkyBox] texture staging 1 = %s, 2 = %s"%(self.texture1File,self.texture2File))
+			t1 = loader.loadTexture(self.texture1File)
 			t1.setWrapU(Texture.WMClamp)
 			t1.setWrapV(Texture.WMClamp)
 			ts1 = TextureStage('Space')
-			ts1.setSort(1)
+			ts1.setSort(self.texture1Sort)
 			
-			t2 = loader.loadTexture(self.textureFile2)
+			t2 = loader.loadTexture(self.texture2File)
 			t2.setWrapU(Texture.WMClamp)
 			t2.setWrapV(Texture.WMClamp)
 			ts2 = TextureStage('SpaceClouds')
-			ts2.setSort(2)
-			
-			
+			ts2.setSort(self.texture2Sort)
 			self.node.setTexture(ts1, t1)
 			self.node.setTexture(ts2, t2)
-			
 		if self.shaderFile:
-			skyShader = Shader.load(self.shaderFile)
+			LOG.debug("[SkyBox] shader = %s"%self.shaderFile)
+			skyShader = Shader.load("./data/shaders/%s"%self.shaderFile)
 			self.node.setShader(skyShader)
 		
 		# Should this be scaled here or done to the model?
@@ -73,11 +83,11 @@ class SkyBox(object):
 		# We don't want shadows on the skybox
 		self.node.setLightOff()
 		
-		
-	def render(self):
 		# Render
 		self.node.reparentTo(self.parent)
-		#taskMgr.add(self.moveSkyTask, "Move the sky box with the cam")
+		taskMgr.add(self.moveSkyTask, "Move the sky box with the cam")
+		
+		#LOG.debug("[SkyBox] done rendering")
 		
 	def moveSkyTask(self, Task):
 		camPos=camera.getPos(render)

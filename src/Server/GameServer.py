@@ -44,7 +44,7 @@ from Server.GameStateServer import GameStateServer
 from Server.ServerConsts import *
 from Util.Log import LogConsole
 
-class PSGServer():
+class PSGServer(object):
 	''' The main server that listens for connections and manages active games.
 		This also runs the console which can interact with the server.'''
 		
@@ -205,6 +205,13 @@ class PSGServer():
 		elif (msgID == MSG_JOINGAME_REQ):
 			self._console.printNotice('Notice: MSG_JOINGAME_REQ')
 			self.__handleJoinGame(data, msgID, client)
+		elif (msgID == MSG_DOWNLOADMAP_REQ):
+			self._console.printNotice('Notice: MSG_DOWNLOADMAP_REQ')
+			self.__handleDownloadMap(data, msgID, client)
+		elif (msgID == MSG_DOWNLOADUPD_REQ):
+			self._console.printNotice('Notice: MSG_DOWNLOADUPD_REQ')
+			self.__handleDownloadUpdate(data, msgID, client)
+		# In-game server messages
 		elif (msgID >= MSG_INGAME):
 			self.__route(data, msgID, client)
 		else:
@@ -376,6 +383,7 @@ class PSGServer():
 		numPlayers  = data.getUint32()
 		
 		# If we do not have the map for the requested game tell client
+		print("id=%s"%mapID)
 		if(not self._mapStore.isAvailable(id=mapID)):
 			response = 0
 		else:
@@ -407,10 +415,12 @@ class PSGServer():
 		
 		# Find the game
 		game = None
+		mapMD5 = "00000000000000000000000000000000"
 		print self.games
 		for g in self.games:
 			if g.id == id:
 				game = g
+				mapMD5 = g.mapID
 		
 		if game == None:
 			LOG.debug('No such game')
@@ -427,9 +437,41 @@ class PSGServer():
 		pkg = NetDatagram()
 		pkg.addUint16(MSG_JOINGAME_RES)
 		pkg.addUint32(resp)
+		pkg.addString(mapMD5)
 		self._cWriter.send(pkg, client)
 		self._console.printNotice('%s: Request to join game id %d, gave %d.'%(client.getAddress().getIpString(),id,resp))
+	
+	def __handleDownloadMap(data, msgID, client):
+		''' Prepare and send requested map to client
+			data (PyDatagramIterator): the list of data sent with this datagram
+			msgID (Int): the message ID
+			client (Connection): the connection that tendNehis datagram came from'''
 		
+		# Unpack message data
+		id = data.getUint32()
+		resp = 0
+		
+		filename = self._mapStore.getMap(id=id)['filename']
+		mapString = self._mapStore.loadMapAsString(filename)
+		
+		if (mapString == None):
+			LOG.debug('No such map')
+			resp = 0
+			mapString = ''
+		else:
+			LOG.debug('Sending map')
+			resp = 1
+			
+		# Send response
+		pkg = NetDatagram()
+		pkg.addUint16(MSG_JOINGAME_RES)	
+		pkg.addUint32(resp)
+		pkg.addString(mapString)
+		self._cWriter.send(pkg, client)
+			
+	def __handleDownloadUpdate(data, msgID, client):
+		pass
+	
 	def __route(self, data, msgID, client):
 		LOG.notice('Routing msg to GameStateServer')
 		

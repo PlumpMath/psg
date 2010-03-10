@@ -16,39 +16,63 @@ from pandac.PandaModules import Vec3
 
 # PSG imports
 from Util.Singleton import Singleton
+#from GXEng.GXMgr import GXMgr
 import Event
 
 
 class EntityManager(object):
 	'''
-	
+		TODO - Document
 	'''
 	__metaclass__ = Singleton
 	
-	_entities = []
+	_entities = {}
+	_gxmgr    = None
+	
 	def __init__(self):
-			pass
-			
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[EntityManager] Initializing")
+	
+	def registerGXEng(self, gxmgr):
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[EntityManager] Registering GXMgr")
+		self._gxmgr = gxmgr
+	
 	def addEntity(self, entity):
-		if not entity in self._entities:
-			#print("EntityManager adding " + str(entity))
-			self._entities.append(entity)
-			Event.Dispatcher().broadcast(Event.Event('E_New_EntityRep', src=self, data=entity))
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[EntityManager] Adding entity %s - %d"%(entity,id(entity)))
+		if not entity in self._entities.keys():
+			self._entities[entity] = self._gxmgr.buildRepresentation(entity)
 			
 	def delEntity(self,  entity):
 		'''TODO - Broadcast a del'''
+		LOG.debug("[EntityManager] Deleting entity %s"%entity)
 		try:
 			self._entities.remove(entity)
 		except:
 			pass
 			
 	def getFromTag(self, tag):
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[EntityManager] Getting entity from tag %s"%tag)
 		for e in self._entities:
 			if e.getTag() == tag:
 				return e
 		return None
 		
 	def getEntitiesWithin(self, pos, radius):
+		'''
+			TODO - Document
+		'''
+		LOG.debug("[EntityManager] Finding entities within %s of point %s"%(radius, pos))
 		entityList = []
 		px = pos.getX()
 		py = pos.getY()

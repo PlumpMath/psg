@@ -8,6 +8,8 @@
 	router pulls out the next part of the datagram which is a game ID. The
 	router then passes the message to the appropriate GameStateServer. At the
 	GameStateServer the message is passed to the appropriate handler.
+	
+	DGS stands for DataGram Structure
 
 	Author:			Chad Rempp
 	Date:			2009/05/30
@@ -116,6 +118,35 @@ MSG_JOINGAME_RES    = 19
 #            0 = No such game
 #            1 = Game full
 #            2 = Ok
+# string  - Map MD5 for the game
+
+MSG_DOWNLOADMAP_REQ  = 20
+#__________DGS__________
+# uint16  - message id
+# string  - Map ID (MD5)
+
+MSG_DOWNLOADMAP_RES  = 21
+#__________DGS__________
+# uint16  - message id
+# uint32  - Status
+#            0 = No such map
+#            1 = Success
+#            2 = Failure
+# string  - Map data string
+
+MSG_DOWNLOADUPD_REQ  = 22
+#__________DGS__________
+# uint16  - message id
+# string  - Version number
+
+MSG_DOWNLOADUPD_RES  = 23
+#__________DGS__________
+# uint16  - message id
+# uint32  - Status
+#            0 = No such map
+#            1 = Success
+#            2 = Failure
+# string  - Update data string
 
 #__________IN-GAME MESSAGES__________
 MSG_INGAME          = 50

@@ -21,31 +21,49 @@ import os
 #from Entity import *
 #from Player import Player
 from GameConsts import *
-from Util.Serializable import Serializable
 
-class Map(Serializable):
+
+class Map(object):
 	''' Hold the map data including all players and objects within the map
 	
-	The Map object is used to serialize most of the static game data. Map
-	objects should not persist. Load the data and let it die.
-	
+	The Map object is used to serialize most of the static game data.
 	'''
 
-	_VERSION   = '0.1'
-	name       = 'Default Map'
-	id         = 0
-	numPlayers = 0
-	mapSize    = (150,150,80)
-
+	#VERSION    = '0.1'
+	#name       = 'New Map'
+	#numPlayers = 0
+	#mapSize    = (150,150,80)
+	#playerList = []
+	#entityList = []
+	#skybox     = None
+	#lightList  = []
+	#cameraList = []
+	
 	def __init__(self, filename=''):
-		if filename is not '':
-			self.read(filename)
-		else:
-			self.playerList  = []
-			self.entityList  = []
-			self._skybox     = None
-			self._lights     = None
-			self._camera     = None
+		self.VERSION    = '0.1'
+		self.name       = ''
+		self.numPlayers = 0
+		self.mapSize    = (150,150,80)
+		
+		# playerList is a list of Player objects
+		self.playerList = []
+		
+		# entityList is a list of Entity objects
+		self.entityList = []
+		
+		# skybox is a SkyBox object
+		self.skybox     = None
+		
+		# lightList is a list of dictionarties defining lights. These are not
+		# instances so they must be instantiated
+		self.lightList  = []
+		
+		# cameraList is a list of camera objects
+		self.cameraList = []
+		
+		#if filename is not '':
+		#	self.read(filename)
+		print("name=%s"%self.name)
 
 class MapStore(object):
 	''' Holds and manipulates a collection of available maps.
@@ -68,52 +86,105 @@ class MapStore(object):
 		self.availableMaps = []
 		
 		for f in os.listdir(MAP_PATH):
-			if (os.path.splitext(f)[1] == MAP_EXT):
-					map = self.loadMap(filename=f)
-					dict = {'id':self.getMapMD5(f), 'filename':f, 'name':map.name, 'obj':None}
-					self.availableMaps.append(dict)
+			#print("Checking %s"%f)
+			if (not f.startswith('.') and os.path.splitext(f)[1] == MAP_EXT):
+				#print("  adding %s"%f)
+				map = self.loadMap(filename=f)
+				dict = {'id':self.getMapMD5(f), 'filename':f, 'name':map.name, 'numplayers':map.numPlayers}
+				self.availableMaps.append(dict)
+		#print(self.availableMaps)
 	
-	def getMapDict(self, filename='', id='', name=''):
-		''' Return the map dictionary with the filename or id.'''
+	def getMap(self, id='', filename='', name=''):
+		''' Return the map dictionary matching on given parameters.'''
+		for mapDict in self.availableMaps:
+			if (id is not '' and mapDict['id'] == id):
+				return mapDict
+			if (filename is not '' and mapDict['filename'] == filename):
+				return mapDict
+			if (name is not '' and mapDict['name'] == name):
+				return mapDict
+		return None
+		
+	def getId(self, filename='', name=''):
+		''' Return the map id for the map matching the given parameters.'''
 		for m in self.availableMaps:
 			if (filename is not '' and m['filename'] == filename):
 				return m
 			if (name is not '' and m['name'] == name):
 				return m
-			if (id != '' and m['id'] == id):
-				return m
 		return None
 	
-	def isAvailable(self, filename='', id='', name=''):
-		''' Is the map with filename or id available in the availableMaps
-		list?'''
-		if self.getMapDict(filename=filename, id=id, name=name) is not None:
-			return True
-		else:
-			return False
-	
-	def isLoaded(self, filename='', id='', name=''):
-		''' Is the map with filename or id in the availableMaps list loaded?'''
-		map = self.getMapDict(filename=filename, id=id)
-		if map is not None and map['obj'] is not None:
-			return True
-		else:
-			return False
+	def isAvailable(self, id='', filename='', name=''):
+		''' Is the map with given parameters in the availableMaps list?'''
 		
+		for m in self.availableMaps:
+			if (id is not '' and m['id'] == id):
+				return True
+			if (filename is not '' and m['filename'] == filename):
+				return True
+			if (name is not '' and m['name'] == name):
+				return True
+		return False
+	
 	def loadMap(self, filename):
-		'''Loads the map object and returns it.
+		'''Loads the map object, unpickles and returns it.
 		   If the map is not available None is returned.'''
-		mDict = self.getMapDict(filename=filename)
-		if mDict is not None:
-			if mDict['obj'] is not None:
-				return mDict['obj']
+		
+		fullPath = "%s%s"%(MAP_PATH,filename)
+		m = None
+		
+		if (os.path.exists(fullPath)):
+			try:
+				fh = open(fullPath, 'rb')
+				try:
+					m = cPickle.load(fh)
+				except cPickle.UnpicklingError as (errno, strerror):
+					LOG.error("Could not read file: %s [%s]"%(fullPath,strerror))	
+			except IOError as (errno, strerror):
+				LOG.error("Could not open file: %s [%s]"%(fullPath,strerror))
 			else:
-				mDict['obj'] = Map("%s%s"%(MAP_PATH,filename))
-				return mDict['obj']
+				fh.close()
 		else:
-			m = Map("%s%s"%(MAP_PATH,filename))
-			return m
-
+			LOG.error("Map file does not exist: %s"%(file))
+		
+		return m
+	
+	def loadMapAsString(self, filename):
+		'''Loads the map object as a string and returns it.
+		   If the map is not available None is returned. This is meant for
+		   sending maps to clients.'''
+		
+		fullPath = "%s%s"%(MAP_PATH,filename)
+		m = None
+		
+		if (os.path.exists(fullPath)):
+			try:
+				fh = open("%s%s"%(MAP_PATH,filename), 'rb')
+				m = fh.read()
+			except IOError as (errno, strerror):
+				LOG.error("Could not open file: %s [%s]"%(fullPath,strerror))
+			else:
+				fh.close()
+				
+		return m
+	
+	def writeMap(self, filename, map):
+		''' Pickle map and write to file. We must attach the file handle
+			to the class so we can easily remove it before pickling.'''
+		
+		fullPath = "%s%s"%(MAP_PATH,filename)
+		
+		try:
+			fh = open(fullPath, 'wb')
+			try:
+				cPickle.dump(self,fh,2)
+			except cPickle.PicklingError as (errno, strerror):
+				LOG.error("Could not write file: %s [%s]"%(fullPath,strerror))
+		except IOError as (errno, strerror):
+			LOG.error("Could not open file: %s [%s]"%(fullPath,strerror))
+		else:
+			fh.close()
+			
 	def getMapMD5(self, filename):
 		''' Return the MD5 checksum for the given mapfile.'''
 		file = open(MAP_PATH + filename, 'rb')
@@ -121,15 +192,11 @@ class MapStore(object):
 		return check
 	
 	def getAvailableFiles(self):
-		''' Return a list of filenames for available maps.
-			
-			This is needed by the GUI code.'''
+		''' Return a list of filenames for available maps (needed by GUI).'''
 		return [map['filename'] for map in self.availableMaps]
 		
 	def getAvailableNames(self):
-		''' Return a list of names for available maps.
-		
-			This is needed by the GUI code.'''
+		''' Return a list of names for available maps (needed by GUI).'''
 		return [map['name'] for map in self.availableMaps]
 	
 	def __str__(self):

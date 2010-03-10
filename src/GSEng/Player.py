@@ -13,22 +13,23 @@ import cPickle
 import os
 
 # PSG imports
-from Util.Serializable import Serializable
 
-class Player(Serializable):
+class Player(object):
 	id          = 0
 	name        = 'New Player'
 	faction     = 'Gorgons'
 	type        = 'Human'
-	AI          = None
+	ai          = None
 	
 	isConnected = False
 	_gamesPlayed = 0
 	_gamesWon    = 0
 	_gamesLost   = 0
 	
-	def __init__(self,  name="Player", faction='Gorgons', type='ComputerAI',
+	def __init__(self, id=0, name="Player", faction='Gorgons', type='ComputerAI',
 				 ai=None, gamesplayed=0, gameswon=0, gameslost=0):
+		if id > 0:
+			self.id = id
 		self.name        = name
 		self.faction     = faction
 		self.type        = type

@@ -17,9 +17,9 @@ from direct.gui.OnscreenImage import OnscreenImage
 # PSG imports
 from ClientConnection import ClientConnection
 #import GUI
-from GUI.components import *
-from GUI.widgets import *
-from GUI.core import Gui
+from GUI.Treegui.components import *
+from GUI.Treegui.widgets import *
+from GUI.Treegui.core import Gui
 from Settings import GameSettings
 import Event
 from GameConsts import *
@@ -186,10 +186,10 @@ class MainScreen(object):
 	def exit(self):
 		Event.Dispatcher().broadcast(Event.Event('E_ExitProgram',src=self))
 		
-	def startGame(self, gameID):
+	def startGame(self, mapMD5):
 		''' Clean up all the menus and then tell dispatcher to start the game'''
 		self.background.destroy()
-		Event.Dispatcher().broadcast(Event.Event('E_StartGame', src=self, data=gameID))
+		Event.Dispatcher().broadcast(Event.Event('E_StartGame', src=self, data=mapMD5))
 
 class MainPane(Pane):
 	def __init__(self, parent, gcli):
@@ -286,19 +286,24 @@ class MultiPane(Pane):
 				#print(self._mapStore)
 				mapName = self.s_maps.buttons[self.s_maps.getSelectedOption()].text
 				#print(mapName)
-				mapDict = self._mapStore.getMapDict(name=mapName)
+				mapDict = self._mapStore.getMap(name=mapName)
+				
+				print("id=%s"%mapDict['id'])
 				if mapDict is not None:
 					self._clientcon.newGame(self.i_name.text, mapDict['id'], self.i_num.text, self._createResponse)
 				else:
 					self.createDialog.text = "Cannot load selected map"
+					LOG.error("[createPane] Cannot load selected map")
 		
 		def _createResponse(self, status):
+			print("Resp=%s"%status)
 			if status > 0:
 				self.createDialog.ok()
 				self._parent._refreshGames()
 				self._cancel()
 			else:
 				self.createDialog.text = "Error creating game"
+				LOG.error("[createPane] Error creating game")
 		
 		def _cancel(self):
 			self._parent.visible = True
@@ -324,6 +329,7 @@ class MultiPane(Pane):
 		self.width = MENUSIZE[0]
 		self.height = MENUSIZE[1]
 		self._clientcon = ClientConnection()
+		self._mapStore = MapStore()
 		
 		server = self._clientcon.address
 		port = self._clientcon.port
@@ -413,7 +419,7 @@ class MultiPane(Pane):
 	
 	def _refreshGames(self):
 		'''Request list of available games from server and populate list'''
-		LOG.notice('Updating games...')
+		LOG.debug('[MultiPane] Updating games')
 		
 		def onResp(games):
 			for g in games:
@@ -432,6 +438,7 @@ class MultiPane(Pane):
 		def connectionResponse(resp):
 			if resp:
 				connectDialog.text = 'Connected to the server,\nauthenticating...'
+				LOG.notice("[MultiPane] Connected to the server, authenticating...")
 				self._clientcon.authenticate(username, password, authResponse)
 			else:
 				connectDialog.text = 'Connection failed.'
@@ -440,22 +447,26 @@ class MultiPane(Pane):
 		def authResponse(resp):
 			if (resp == 0):
 				connectDialog.text = 'Authentication failed.'
+				LOG.error("[MultiPane] Authentication failed")
 				connectDialog.button.text = "ok"
 			elif (resp == 1):
 				connectDialog.text = 'You are already connected.'
+				LOG.error("[MultiPane] You are already connected")
 				self._setConnected()
 				connectDialog.button.text = "ok"
 			elif (resp == 2):
 				connectDialog.text = 'Incorrect password.'
+				LOG.error("[MultiPane] Incorrect password")
 				connectDialog.button.text = "ok"
 			elif (resp == 3):
 				connectDialog.text = 'Authenticated.\nYou are connected.'
+				LOG.notice("[MultiPane] Authenticated. You are connected")
 				self._setConnected()
 				self._refreshGames()
 				connectDialog.button.text = "ok"
 				#self.updateGameList()
 			
-		LOG.notice("connecting server=%s port=%s user=%s, pass=%s"%(self.i_server.text, self.i_port.text, self.i_username.text, self.i_password.password))
+		LOG.notice("[MultiPane] connecting server=%s port=%s user=%s, pass=%s"%(self.i_server.text, self.i_port.text, self.i_username.text, self.i_password.password))
 		
 		# Get the values from the form
 		server   = self.i_server.text
@@ -468,9 +479,10 @@ class MultiPane(Pane):
 			self._clientcon.address = server
 			connectDialog = gui.add(Dialog())
 			connectDialog.text = "connecting to server %s"%server
+			LOG.notice("[MultiPane] Connecting to server %s"%server)
 			self._clientcon.connect(server, int(port), 3000, connectionResponse)
 		else:
-			LOG.error('You did not fill in the all the values')
+			LOG.error('[MultiPane] You did not fill in the all the values')
 			connectDialog = gui.add(Dialog())
 			connectDialog.text = "Please fill in all the values."
 	
@@ -485,22 +497,44 @@ class MultiPane(Pane):
 			The only way I can think of attaching the game ID to the selection
 			list is in the button text so now we need to extract it.
 		'''
-		def response(status):
+		def response(status, mapMD5):
 			if (status == 0):
 				joinDialog.text = "could not find the game"
+				LOG.error("[MultiPane] Could not find the game")
 			elif (status == 1):
 				joinDialog.text = "the game is full"
+				LOG.error("[MultiPane] The game is full")
 			elif (status == 2):
-				joinDialog.visible = False
-				self._parent.startGame(gameID)
+				if self._mapStore.isAvailable(id=mapMD5):
+					joinDialog.visible = False
+					self._parent.startGame(mapMD5)
+				else:
+					joinDialog.text = "downloading map..."
+					LOG.notice("[MultiPane] downloading map...")
+					downloadMap(mapMD5)
 			else:
 				joinDialog.text = "unknown error"
+				LOG.error("[MultiPane] Unknown error")
 		
+		def downloadResp(status, mapMD5):
+			if (status == 0):
+				joinDialog.text = "download failed."
+				LOG.error("[MultiPane] download failed")
+			elif (status == 1):
+				self._parent.startGame(mapMD5)
+			else:
+				joinDialog.text = "unknown error"
+				LOG.error("[MultiPane] Unknown error")
+				
+		def downloadMap(id):
+			self._clientcon.downloadMap(id, callback)
+			
 		if (self.s_games.getSelectedOption() is not None):
 			gameString = self.s_games.buttons[self.s_games.getSelectedOption()].text
 			gameID = int(gameString.split('-')[0].strip())
 			joinDialog = gui.add(Dialog())
 			joinDialog.text = "joining game '%s'"%gameString
+			LOG.notice("[MultiPane] joining game '%s'"%gameString)
 			self._clientcon.joinGame(gameID, response)
 		
 class OptionPane(Pane):

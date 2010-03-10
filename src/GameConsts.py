@@ -25,11 +25,8 @@ GRIDINTERVAL  = 3
 LINETHICKNESS = 1
 GRIDCOLOR     = (0, 1, 0, 0)
 
-MAP_PATH      = 'data/maps/'
+MAP_PATH      = 'maps/'
 MAP_EXT       = '.map'
-
-PLAYER_PATH   = 'data/players/'
-PLAYER_EXT    = '.plr'
 
 EVENTS = ['E_All',
 		  'E_Mouse_1', 

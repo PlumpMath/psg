@@ -1,7 +1,7 @@
 import direct.directbase.DirectStart
 from pandac.PandaModules import loadPrcFileData
 from pandac.PandaModules import loadPrcFile 
-loadPrcFile("data/p3d.config")
+loadPrcFile("cfg/p3d.config")
 
 # Python imports
 import sys

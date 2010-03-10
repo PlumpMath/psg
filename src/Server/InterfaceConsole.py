@@ -10,6 +10,11 @@
 import platform
 import sys
 import time
+try:
+	from guppy import hpy
+	HASGUPPY = True
+except:
+	HASGUPPY = False
 
 # PSG imports
 from Server.Interface import Interface
@@ -96,6 +101,20 @@ class InterfaceConsole(Interface):
 				self.__lsGames()
 			elif self._commandTok[0] == 'kill':
 				self.__kill()
+			elif self._commandTok[0] == 'mem':
+				# TODO - Move this out
+				if HASGUPPY:
+					h = hpy()
+					print(h.heap().get_rp(40))
+					print(h.heap().get_rp(40).more)
+				else:
+					self.__printLine('No Guppy support')
+			elif self._commandTok[0] == 'memmon':
+				if HASGUPPY:
+					h = hpy()
+					h.pb()
+				else:
+					self.__printLine('No Guppy support')
 			else: # Unknown command
 				self.__printLine('Unknown command, I understand these:')
 				self.__printLine('lsconn      lsusers     lsgames')

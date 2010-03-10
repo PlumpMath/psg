@@ -55,7 +55,7 @@ class Dispatcher(object):
 			both the Dispatcher and LogConsole are Singletons and it seems to
 			cause a recursion error if we use the call method.'''
 		
-		LOG.notice("Starting Dispatcher")
+		LOG.debug("[Dispatcher] Initializing")
 		for e in self._eventlist:
 			self._listeners[e]=[]
 		
@@ -68,7 +68,7 @@ class Dispatcher(object):
 		if event in self._eventlist:
 			self._listeners[event].append([listener,handler])
 		else:
-			LOG.error("Event %s doesn't exist"%event, 'E')
+			LOG.error("[Dispatcher] Event %s doesn't exist"%event, 'E')
 			
 	def unregister(self, listener, event=None):
 		''' Unregister the given listener from the dispatcher. If an event is
@@ -89,7 +89,7 @@ class Dispatcher(object):
 			The E_All event always needs to be run through.
 			TODO - Check if there's a problem with duplicate event handling due
 			       to the E_All.'''
-		LOG.notice("Broadcasting: %s"%str(event))
+		LOG.notice("[Dispatcher] Broadcasting %s"%str(event))
 		if event is not None and event.type in self._listeners.keys():
 			for l in self._listeners[event.type]:
 				instance  = l[0]
@@ -98,11 +98,11 @@ class Dispatcher(object):
 				try:
 					handler.__get__(instance,classtype)(event)
 				except (Exception),error:
-					LOG.error("Dispatcher - %s"%event,error)
+					LOG.error("[Dispatcher] %s"%event,error)
 			for l in self._listeners['E_All']:
 				instance  = l[0]
 				classtype = l[0].__class__
 				handler   = l[1]
 				handler.__get__(instance,classtype)(event)
 		else:
-			LOG.error("Event %s doesn't exist"%str(event))
+			LOG.error("[Dispatcher] Event %s doesn't exist"%str(event))

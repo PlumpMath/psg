@@ -21,6 +21,7 @@ class GameStateServer(Game):
 		
 		# Connections relevent to this game
 		self.connections = []
+		self.mapID = mapID
 		
 		# Get an ID
 		if (len(GAME_IDS) > 0):

@@ -16,6 +16,7 @@
 
 # Python imports
 import traceback
+import inspect
 
 # PSG imports
 import Event
@@ -51,10 +52,10 @@ class LogConsole(object):
 		print("%s%s"%(msgStart, msg))
 		
 	def debug(self, msg, e=''):
-		if (DEBUG == 4):
-			msgStart = "DEBUG: "
-			traceback.print_stack()
-			print("%s%s"%(msgStart, msg))
+		if (DEBUG >= 4):
+			msgStart = "DEBUG:"
+			#traceback.print_stack()
+			print("%s %s"%(msgStart, msg))
 			if (e != ''):
 				print("  %s"%e)
 	

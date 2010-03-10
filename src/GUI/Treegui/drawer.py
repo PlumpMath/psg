@@ -1,18 +1,17 @@
 """
 
-    The drawwer tries to draw the ui in as little goems 
+    The drawer tries to draw the ui in as little goems 
     and triangles as possible
     
     It tries to use only a single vertex buffer and only 
     a single texture
     
-    It clips polygons in software rether then resorting to 
-    siccor tests or clip planes wich reduces trips to the card
-    and stpeeds stuff up.
+    It clips polygons in software rather then resorting to 
+    scissor tests or clip planes which reduces trips to the card
+    and speeds stuff up.
 
 """
 
-from pandac.PandaModules import MeshDrawer
 from pandac.PandaModules import *
 import os
 
@@ -24,9 +23,9 @@ def randVec():
     return Vec3(random()-.5,random()-.5,random()-.5)
 
 
-from eggatlas import EggAtlas
+from GUI.Treegui.eggatlas import EggAtlas
 
-from theme import Stretch
+from GUI.Treegui.theme import Stretch
 
 
 
@@ -56,9 +55,9 @@ class Drawer:
         """
             make generic 2d drawer 
         """
-        drawer = MeshDrawer()
+        drawer = MeshDrawer2D()
         drawer.setBudget(3000)
-        drawer.setPlateSize(32)
+
         drawerNode = drawer.getRoot()
         drawerNode.reparentTo(node)
         drawerNode.setDepthWrite(False)
@@ -68,6 +67,11 @@ class Drawer:
         drawerNode.setLightOff(True)
         drawerNode.node().setBounds(OmniBoundingVolume())
         drawerNode.node().setFinal(True) 
+		
+		# debug wire frame
+        #cc = drawerNode.copyTo(node)
+        #cc.setRenderModeWireframe()
+
         return drawer
 
     def makeThemeDrawer(self,node):
@@ -82,7 +86,10 @@ class Drawer:
     def draw(self,children):
         """ draws all of the children """
         self.clip = [(0,0,gui._width+100, gui._height+100)]
-        self.drawer.begin(base.cam,render)
+
+        self.drawer.setClip(0,0,gui._width+100, gui._height+100)
+        
+        self.drawer.begin()
         z = 0
         for child in reversed(children):
             z += 1
@@ -115,7 +122,7 @@ class Drawer:
         
         if thing.clips:
             # set clip stuff
-            self.doClip(realX,realY,realX+thing._width,realY+thing._height)
+            self.pushClip(realX,realY,realX+thing._width,realY+thing._height)
             
         if thing.icon:
             rect = self.atlas.getRect(thing.icon)
@@ -148,7 +155,7 @@ class Drawer:
                 self.drawChild(realX,realY,z,child)
                 
         if thing.clips:
-            self.clip.pop()
+            self.popClip()
     
      
     
@@ -237,7 +244,12 @@ class Drawer:
         self.rectStreatch((x,y,xs,ys),(u,v,us,vs))
         
         
-    def doClip(self,xs,ys,xe,ye):
+    def popClip(self):
+        self.clip.pop()
+        xs,ys,xe,ye = self.clip[-1]
+        self.drawer.setClip(xs,ys,xe-xs,ye-ys)
+            
+    def pushClip(self,xs,ys,xe,ye):
         bxs,bys,bxe,bye = self.clip[-1]
         
         xs = max(bxs,xs)
@@ -247,82 +259,23 @@ class Drawer:
         
         self.clip.append((xs,ys,xe,ye))   
         
+        self.drawer.setClip(xs,ys,xe-xs,ye-ys)
+
     def rectStreatch(self,(x,y,xs,ys),(u,v,us,vs)):
         """ draw a generic stretched rectangle """
         # do clipping now:
         
-        clipXStart,clipYStart,clipXEnd,clipYEnd = self.clip[-1]
-        
-        if (x >= clipXStart and 
-            y >= clipYStart and
-            x+xs <= clipXEnd and
-            y+ys <= clipYEnd):
-            
-                pass
-            
-        elif ((x >= clipXStart or x+xs <= clipXEnd) and 
-              (y >= clipYStart or y+ys <= clipYEnd)):
-            
-            xRatio = us/xs
-            yRatio = vs/ys 
-            
-            if x > clipXEnd: return
-            if y > clipYEnd: return
-            if x+xs < clipXStart: return
-            if y+ys < clipYStart: return
-            
-            
-            if x < clipXStart: 
-                dt = clipXStart-x
-                x  += dt
-                xs -= dt               
-                u  += dt*xRatio
-                us -= dt*xRatio 
-                                 
-            if y < clipYStart: 
-                dt = clipYStart-y
-                y  += dt
-                ys -= dt
-                v  += dt*yRatio 
-                vs -= dt*yRatio
-                
-            if x+xs > clipXEnd: 
-                dt = xs + x - clipXEnd
-                xs -= dt 
-                us -= dt*xRatio
-                             
-               
-            if y+ys > clipYEnd: 
-                dt = ys + y - clipYEnd
-                ys -= dt 
-                vs -= dt*yRatio         
-
-        else:
-            
-            return
-
-        
-        # final draw thing
-        
-        z = 0
-        color = self.color 
-        v1 = Vec3(x,    z,y)
-        v2 = Vec3(x+xs, z,y)
-        v3 = Vec3(x+xs, z,y+ys)
-        v4 = Vec3(x,    z,y+ys)
+        color = Vec4(1,1,1,1)
         
         w = self.w
         h = self.h
         
-        u,v,us,vs = u/w,1-v/h,(u+us)/w,1-(v+vs)/h,
-        self.drawer.tri( 
-            v1, color, Vec2(u,v),
-            v2, color, Vec2(us,v),
-            v3, color, Vec2(us,vs))
+        u,v,us,vs = u/w,1-v/h,(u+us)/w,1-(v+vs)/h
         
-        self.drawer.tri( 
-            v3, color, Vec2(us,vs),
-            v4, color, Vec2(u,vs),
-            v1, color, Vec2(u,v))
+        self.drawer.rectangle( 
+            x,y,xs,ys,
+            u,v,us-u,vs-v,
+            #u/self.w,v/self.h,us/self.w,vs/self.h,
+            color)
 
 

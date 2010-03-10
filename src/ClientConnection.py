@@ -24,10 +24,13 @@ import hashlib, sys, time
 from direct.task import Task
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from pandac.PandaModules import ConnectionWriter
+from pandac.PandaModules import HTTPClient
 from pandac.PandaModules import NetDatagram
 from pandac.PandaModules import QueuedConnectionManager
 from pandac.PandaModules import QueuedConnectionListener
 from pandac.PandaModules import QueuedConnectionReader
+
+#from pandac.PandaModules import 
 
 # PSG imports
 from GSEng.Game import *
@@ -43,7 +46,7 @@ class ClientConnection(object):
 	
 	__metaclass__ = Singleton
 	
-	address        = 'chadrempp.com'
+	address        = '127.0.0.1' #'chadrempp.com'
 	port           = '9091'
 	timeout        = '3000'
 	_callback       = None
@@ -195,7 +198,8 @@ class ClientConnection(object):
 		
 			gameid (int): The ID of the game to join
 			callback (function): Funtion that will be called when a response is
-				received. Callback will be passed one parameter (status).
+				received. Callback will be passed two parameters (status and
+				mapMD5).
 					status = 0 if no such game exists
 					status = 1 if game is full
 					status = 2 if joining game was successful
@@ -203,6 +207,31 @@ class ClientConnection(object):
 		self.__sendJoinGameReq(gameid)
 		self._respCallback[MSG_JOINGAME_RES] = callback
 	
+	def downloadMap(self, mapid, callback):
+		''' Download the map with the given id (MD5).
+			
+			mapid (string): The MD5 id of the map to download.
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed two parameters (status and
+				mapMD5).
+					status = 0 if no such map exists
+					status = 1 if download was successful
+		'''
+		self._respCallback[MSG_DOWNLOADMAP_RES] = callback
+		self._download("MAP", mapid)
+	
+	def registerGame(self, game, callback):
+		''' Tell server we are loaded and ready. The game ID is returned.
+			
+			game (Game): The game to be registered.
+			callback (function): Funtion that will be called when a response is
+				received. Callback will be passed one parameter (status).
+					status = 0 if registration fails
+					status > 0 the id of the game on success
+		'''
+		id = 1
+		callback(id)
+		
 	def sendUnitMove(self, movedentity, callback):
 		''' Send updated entity to server.'''
 		self.__sendUnitMove(movedentity)
@@ -247,7 +276,19 @@ class ClientConnection(object):
 		LOG.debug('Pinging')
 		# Add task back into the taskmanager
 		taskMgr.doMethodLater(PING_DELAY, self.__pingTask, 'serverPingTask', sort=-41)
-
+	
+	def __downloadTask(self, Task):
+			if self.channel.run():
+				# Still waiting for file to finish downloading.
+				return task.cont
+			if not self.channel.isDownloadComplete():
+				print "Error downloading file."
+				return task.done
+			data = self.rf.getData()
+			print "got data:"
+			print data
+			return task.done
+	
 	def __handleDatagram(self, data, msgID, client):
 		''' This handles incoming messages by calling the appropriate handler.
 			data (PyDatagramIterator): the list of data sent with this datagram
@@ -441,11 +482,27 @@ class ClientConnection(object):
 		
 		# Unpack message data
 		join_response = data.getUint32()
+		map_md5 = data.getString()
 		
 		# If there is a callback function pass the response to it
 		if self._respCallback[msgID]:
-			self._respCallback[msgID](join_response)
+			self._respCallback[msgID](join_response, map_md5)
 			self._respCallback[msgID] = None
+	
+	def _sendDownloadReq(type, id):
+		''' Download a file from the server.'''
+		
+		LOG.debug("Downloading type=%s, id=%s"%(type, id))
+		
+		if (self._connected and self._authorized):
+			pkg = NetDatagram()
+			if (type == "MAP"):
+				pkg.addUint16(MSG_DOWNLOADMAP_REQ)
+				pkg.addUint32(id)
+			elif (type == "UPDATE"):
+				pkg.addUint16(MSG_DOWNLOADUPD_REQ)
+				pkg.addUint32(id)
+			self._cWriter.send(pkg, self._tcpSocket)
 	
 	def __sendChat(self, message):
 		''' Send chat message to the server.'''
