@@ -1,11 +1,10 @@
 import sys
 import getopt
-sys.path.append('./src')
-from Util.Log import LogConsole
+from game.Util.Log import LogConsole
 
 def convertMap():
 	#from tools.editor import convert
-	from Util.editor import convert
+	from game.Util.editor import convert
 	convert.runConvert()
 
 if __name__ == '__main__':

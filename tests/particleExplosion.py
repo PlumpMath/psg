@@ -31,7 +31,7 @@ ESC: Quit
 
 class World(DirectObject):
 	def __init__(self):
-		sys.path.append('../game')
+		#sys.path.append('../game')
 		#Standard title and instruction text
 		self.title = OnscreenText(
 			text="PSG: Test - Explosion",
@@ -86,8 +86,10 @@ class World(DirectObject):
 		directionalLight.setColor( Vec4( 0.9, 0.8, 0.9, 1 ) )
 		lAttrib = lAttrib.addLight( directionalLight )
 		#set lighting on teapot so steam doesn't get affected
-		self.t.attachNewNode( directionalLight.upcastToPandaNode() ) 
-		self.t.attachNewNode( ambientLight.upcastToPandaNode() ) 
+		#self.t.attachNewNode( directionalLight.upcastToPandaNode() )
+		self.t.attachNewNode( directionalLight ) 
+		#self.t.attachNewNode( ambientLight.upcastToPandaNode() )
+		self.t.attachNewNode( ambientLight) 
 		self.t.node().setAttrib( lAttrib )
 
 w = World()

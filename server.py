@@ -8,6 +8,8 @@ loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'client-sleep 0.01')
 import direct.directbase.DirectStart
 
+from game.Server.GameServer import PSGServer
+
 if __name__ == '__main__':
 	# Parse arguments
 	try:
@@ -32,10 +34,6 @@ if __name__ == '__main__':
 			sys.exit()
 		else:
 			assert False, "unhandled option"
-	
-	# Add the code directory to path and import what we need
-	sys.path.append('./src')
-	from Server.GameServer import PSGServer
 	
 	# Run the server
 	server = PSGServer()

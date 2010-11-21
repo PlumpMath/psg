@@ -153,11 +153,13 @@
 		<distance>40</distance>
 	</camera>
 	<skybox>
+		<model>skybox_03.egg</model>
+	</skybox>
+	<skybox_old>
 		<model>skybox_02.egg</model>
 		<texture stage="Space" sort="1">tex_skybox_01.jpg</texture>
 		<texture stage="SpaceClouds" sort="2">tex_skybox_cloud.png</texture>
-		<shader>sky.sha</shader>
-	</skybox>
+	</skybox_old>
 	<lights>
 		<light type="AmbientLight" tag="aLight">
 			<color r="0.6" g="0.7" b="0.8" a="1.0" />
