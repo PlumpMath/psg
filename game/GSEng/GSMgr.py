@@ -73,7 +73,7 @@ class GSMgr(Game):
 		self._entmgr.registerGXEng(gxmgr)
 	
 	def onMoveKey(self, event):
-		if isinstance(self.selected, ShipEntity):
+		if isinstance(self.selected, Entity.EntityShip):
 				self.s_DoingMoveSelection  = True
 				self.movehandler = MovementSelectionHandler(self, self.selected)
 				self.game.mousecontroller.attach(self.movehandler)

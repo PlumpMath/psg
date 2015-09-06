@@ -63,40 +63,40 @@ __builtin__.NOMENU = True
 __builtin__.PSTAT = False
 
 def main():
-	# Create the game instance
-	gcli = GameClient.GameClient()
-	
-	if PSTAT:
-		from pandac.PandaModules import PStatClient
-		PStatClient.connect()
-	
-	run()
+    # Create the game instance
+    gcli = GameClient.GameClient()
+
+    if PSTAT:
+        from pandac.PandaModules import PStatClient
+        PStatClient.connect()
+
+    run()
 
 if __name__ == '__main__':
-	# Add the code directory to path and import what we need
-	
-	# Parse arguments
-	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hspd:", ["help", "noserver", "pstat", "debug="])
-	except getopt.GetoptError, err:
-		# print help information and exit:
-		print str(err) # will print something like "option -a not recognized"
-		print("Figure it out!")
-		sys.exit(2)
-	
-	for o, a in opts:
-		if o in ("-d", "--debug"):
-			__builtin__.DEBUG = a
-		elif o in ("-s", "--server"):
-			__builtin__.NOSERVER = True
-		elif o in ("-p", "--pstat"):
-			__builtin__.PSTAT = True
-			sys.exit()
-		elif o in ("-h", "--help"):
-			print("Figure it out!")
-			sys.exit()
-		else:
-			assert False, "unhandled option"
-	
-	main()
+    # Add the code directory to path and import what we need
+
+    # Parse arguments
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hspd:", ["help", "noserver", "pstat", "debug="])
+    except getopt.GetoptError, err:
+        # print help information and exit:
+        print str(err) # will print something like "option -a not recognized"
+        print("Figure it out!")
+        sys.exit(2)
+
+    for o, a in opts:
+        if o in ("-d", "--debug"):
+            __builtin__.DEBUG = a
+        elif o in ("-s", "--server"):
+            __builtin__.NOSERVER = True
+        elif o in ("-p", "--pstat"):
+            __builtin__.PSTAT = True
+            sys.exit()
+        elif o in ("-h", "--help"):
+            print("Figure it out!")
+            sys.exit()
+        else:
+            assert False, "unhandled option"
+
+    main()
 	
